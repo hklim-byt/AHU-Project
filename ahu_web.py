@@ -220,10 +220,16 @@ else:
         pdf.cell(45, 7, txt=" Corrected Heat Load:", border=1)
         pdf.cell(50, 7, txt=f" {int(density_info['corr_heat']):,} kcal/h", border=1, ln=True)
         
-        pdf.cell(45, 7, txt=" Design Temp / RH:", border=1)
-        pdf.cell(50, 7, txt=f" {density_info['temp']} C / {density_info['rh']} %", border=1)
+        # 🌟 [성적서 반영]: 성적서에 설치 지역 메타데이터 정보 추가 기록
+        pdf.cell(45, 7, txt=" Project Location:", border=1)
+        pdf.cell(50, 7, txt=f" {density_info['location']}", border=1)
         pdf.cell(45, 7, txt=" Real Air Density:", border=1)
         pdf.cell(50, 7, txt=f" {density_info['density']} kg/m3", border=1, ln=True)
+        
+        pdf.cell(45, 7, txt=" Corrected Temp (C/H):", border=1)
+        pdf.cell(50, 7, txt=f" {density_info['c_temp']} C / {density_info['h_temp']} C", border=1)
+        pdf.cell(45, 7, txt=" Corrected RH (C/H):", border=1)
+        pdf.cell(50, 7, txt=f" {density_info['c_rh']} % / {density_info['h_rh']} %", border=1)
         pdf.ln(8)
         
         if has_korean:
@@ -252,7 +258,6 @@ else:
         if has_korean:
             pdf.set_font("Malgun", style="", size=8.5)
             pdf.set_text_color(148, 163, 184)
-            # 🌟 [명칭 변경]: PDF 하단 공식 문구 정돈
             pdf.cell(190, 5, txt="* 본 성적서는 루트에어 공기선도_RootAirChart v1.1 수식에 의해 실시간 공기밀도 보정이 완료된 정밀 엔지니어링 문서입니다.", ln=True, align="C")
         
         pdf_output = pdf.output()
@@ -269,19 +274,45 @@ else:
         proj_name = st.text_input("프로젝트 명", placeholder="예: OO빌딩 신축공사")
         proj_author = st.text_input("작성자", placeholder="예: 홍길동 팀장")
         
+        # 🌟 [시나리오 A 핵심]: 기상 데이터 기반 전국 주요 설치 지역 선택 콤보박스 신설
+        location_select = st.selectbox("전국 주요 설치 지역 선택 (WeatherData 연동)", ["서울 (Seoul)", "부산 (Busan)", "대구 (Daegu)", "광주 (Gwangju)", "제주 (Jeju)", "기타 (사용자 수동 설정)"])
+        
         st.write("---")
         st.subheader("2. 설계 조건 입력 (Input)")
         ahu_type = st.radio("공조기 레이아웃 구조 선택", ["H형 (단일팬 컴팩트형)", "HI형 (환기팬 내장 풀스펙형)"])
         cmh = st.number_input("필요 풍량 (CMH)", value=4500, step=100)
         
-        # 🌟 [명칭 변경]: 웹 화면 상의 온습도 설정 패널 명칭 전면 교체
+        # 🌟 [시나리오 A + B 통합 연산부]: 선택한 지역에 따라 온습도 마스터 값을 자동 로딩 및 가변 제어
         with st.expander("🌡️ 루트에어 공기선도_RootAirChart v1.1 기반 공기밀도 설정", expanded=True):
-            design_temp = st.number_input("현장 설계 건구온도 (°C)", value=20.0, step=1.0, min_value=-20.0, max_value=50.0)
-            design_rh = st.slider("현장 설계 상대습도 (%)", value=50, min_value=0, max_value=100, step=5)
+            if "서울" in location_select:
+                c_init_t, c_init_rh, h_init_t, h_init_rh = 32.0, 65, -10.0, 60
+            elif "부산" in location_select:
+                c_init_t, c_init_rh, h_init_t, h_init_rh = 30.0, 70, -5.0, 55
+            elif "대구" in location_select:
+                c_init_t, c_init_rh, h_init_t, h_init_rh = 33.0, 60, -8.0, 55
+            elif "광주" in location_select:
+                c_init_t, c_init_rh, h_init_t, h_init_rh = 31.5, 65, -6.0, 60
+            elif "제주" in location_select:
+                c_init_t, c_init_rh, h_init_t, h_init_rh = 29.5, 75, 1.0, 60
+            else:
+                c_init_t, c_init_rh, h_init_t, h_init_rh = 20.0, 50, 20.0, 50
+                
+            st.caption(f"📢 현재 선택 지역: **{location_select.split(' ')[0]}** 표준 기상 설계 기준 자동 매칭 적용 중")
             
-            calculated_rho = calculate_air_density(design_temp, design_rh)
-            st.metric(label="📊 연산된 현장 습공기 밀도", value=f"{calculated_rho} kg/m³", delta=f"{round(calculated_rho - 1.2041, 4)} vs 표준")
-            st.caption("※ 표준 공기 밀도 기준: 1.2041 kg/m³ (20°C, 50%)")
+            # 냉방 / 난방 시점의 공기 밀도가 각각 다르므로 통합 대표 밀도 도출을 위한 듀얼 가이드 패널 구축
+            cool_temp = st.number_input("냉방 설계 외기 온도 (°C)", value=c_init_t, step=0.5)
+            cool_rh = st.slider("냉방 설계 상대습도 (%)", value=c_init_rh, min_value=0, max_value=100, step=5)
+            
+            heat_temp = st.number_input("난방 설계 외기 온도 (°C)", value=h_init_t, step=0.5)
+            heat_rh = st.slider("난방 설계 상대습도 (%)", value=h_init_rh, min_value=0, max_value=100, step=5)
+            
+            # 각각의 밀도 연산 진행 후 평균 현장 밀도로 안전 연산 진행 🌟
+            rho_cool = calculate_air_density(cool_temp, cool_rh)
+            rho_heat = calculate_air_density(heat_temp, heat_rh)
+            avg_calculated_rho = round((rho_cool + rho_heat) / 2.0, 4)
+            
+            st.metric(label="📊 통합 계산된 현장 평균 공기 밀도", value=f"{avg_calculated_rho} kg/m³", delta=f"{round(avg_calculated_rho - 1.2041, 4)} vs 표준")
+            st.caption(f"(참고 - 여름철 밀도: {rho_cool} kg/m³ | 겨울철 밀도: {rho_heat} kg/m³)")
             
         cool_req = st.number_input("요구 냉방부하 (kcal/h)", value=35000, step=1000)
         heat_req = st.number_input("요구 난방부하 (kcal/h)", value=25000, step=1000)
@@ -305,12 +336,17 @@ else:
                 st.session_state['heat_val'] = heat_req
                 st.session_state['heat_type_val'] = heat_type
                 st.session_state['ahu_type_val'] = ahu_type
+                st.session_state['loc_val'] = location_select
                 st.session_state['p_date'] = proj_date.strftime("%Y년 %m월 %d일")
                 st.session_state['p_name'] = proj_name if proj_name else "미지정 프로젝트"
                 st.session_state['p_author'] = proj_author if proj_author else "담당자"
-                st.session_state['d_temp'] = design_temp
-                st.session_state['d_rh'] = design_rh
-                st.session_state['d_rho'] = calculated_rho
+                
+                # 🌟 시나리오 A+B 연산 파라미터 백업
+                st.session_state['c_t'] = cool_temp
+                st.session_state['c_r'] = cool_rh
+                st.session_state['h_t'] = heat_temp
+                st.session_state['h_r'] = heat_rh
+                st.session_state['final_rho'] = avg_calculated_rho
             
             curr_cmh = st.session_state.get('cmh_val', cmh)
             curr_cool = st.session_state.get('cool_val', cool_req)
@@ -318,16 +354,20 @@ else:
             curr_type = st.session_state.get('heat_type_val', heat_type)
             curr_ahu_type = st.session_state.get('ahu_type_val', ahu_type)
             curr_selected_type = "H" if "H형" in curr_ahu_type else "HI"
+            curr_location = st.session_state.get('loc_val', location_select)
             
             c_date = st.session_state.get('p_date', proj_date.strftime("%Y년 %m월 %d일"))
             c_name = st.session_state.get('p_name', proj_name if proj_name else "미지정 프로젝트")
             c_author = st.session_state.get('p_author', proj_author if proj_author else "담당자")
             
-            c_temp = st.session_state.get('d_temp', design_temp)
-            c_rh = st.session_state.get('d_rh', design_rh)
-            c_rho = st.session_state.get('d_rho', calculated_rho)
+            v_ct = st.session_state.get('c_t', cool_temp)
+            v_cr = st.session_state.get('c_r', cool_rh)
+            v_ht = st.session_state.get('h_t', heat_temp)
+            v_hr = st.session_state.get('h_r', heat_rh)
+            v_rho = st.session_state.get('final_rho', avg_calculated_rho)
             
-            density_ratio = 1.2041 / c_rho
+            # 부하 가중 보정률 계산 (표준 밀도 대비 역산) 🌟
+            density_ratio = 1.2041 / v_rho
             corr_cool_req = curr_cool * density_ratio
             corr_heat_req = curr_heat * density_ratio
             
@@ -361,8 +401,8 @@ else:
                 else:
                     st.warning(status_msg)
 
-                st.info(f"📋 **Project:** {c_name} | 👤 **Author:** {c_author} | 📅 **Date:** {c_date}")
-                st.warning(f"🌡️ **현장 공기밀도:** {c_rho} kg/m³ (보정 계수: {round(density_ratio, 3)}) | ❄️ **보정 냉방부하:** {int(corr_cool_req):,} kcal/h | 🔥 **보정 난방부하:** {int(corr_heat_req):,} kcal/h")
+                st.info(f"📋 **Project:** {c_name} | 👤 **Author:** {c_author} | 📅 **Date:** {c_date} | 📍 **Location:** {curr_location.split(' ')[0]}")
+                st.warning(f"🌡️ **통합 공기밀도:** {v_rho} kg/m³ (보정 계수: {round(density_ratio, 3)}) | ❄️ **보정 냉방부하:** {int(corr_cool_req):,} kcal/h | 🔥 **보정 난방부하:** {int(corr_heat_req):,} kcal/h")
 
                 col_m1, col_m2 = st.columns([1, 1])
                 with col_m1:
@@ -398,7 +438,10 @@ else:
                     'ahu_type_label': curr_ahu_type
                 }
                 project_info = {'date': c_date, 'project_name': c_name, 'author': c_author}
-                density_info = {'temp': c_temp, 'rh': c_rh, 'density': c_rho, 'corr_cool': corr_cool_req, 'corr_heat': corr_heat_req}
+                density_info = {
+                    'location': curr_location, 'density': v_rho, 'corr_cool': corr_cool_req, 'corr_heat': corr_heat_req,
+                    'c_temp': v_ct, 'c_rh': v_cr, 'h_temp': v_ht, 'h_rh': v_hr
+                }
                 
                 pdf_bytes = generate_pdf(selected_row['Model_Name'], specs_list, input_conditions, project_info, density_info)
                 
@@ -407,7 +450,7 @@ else:
                     st.download_button(
                         label="📄 밀도 보정 성적서 다운로드 (PDF)",
                         data=pdf_bytes,
-                        file_name=f"루트에어_공기밀도보정_성적서_{c_name}_{selected_row['Model_Name']}.pdf",
+                        file_name=f"루트에어_기상데이터보정_성적서_{c_name}_{selected_row['Model_Name']}.pdf",
                         mime="application/pdf"
                     )
 
