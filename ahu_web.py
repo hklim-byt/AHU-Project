@@ -39,21 +39,15 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 데이터베이스 로드 함수
+# 🌟 [캐시 로직 개선]: 파일의 수정 시간(mtime)을 감지하여 엑셀이 바뀌면 캐시를 자동 무효화합니다.
 @st.cache_data
-def load_data():
-    db_filename = 'AHU_Selection_Master_DB.csv'
-    if not os.path.exists(db_filename):
-        current_dir = os.getcwd()
-        files = [f for f in os.listdir(current_dir) if f.lower().endswith('.csv')]
-        if files:
-            db_filename = files[0]
-        else:
-            return None
+def load_data(filepath, file_mtime):
+    if not os.path.exists(filepath):
+        return None
             
     for enc in ['utf-8', 'cp949', 'utf-8-sig']:
         try:
-            df = pd.read_csv(db_filename, encoding=enc)
+            df = pd.read_csv(filepath, encoding=enc)
             df.columns = df.columns.str.strip()
             if 'Range_CMH_Min' in df.columns:
                 return df
@@ -61,159 +55,153 @@ def load_data():
             continue
     return None
 
-df = load_data()
+# 대상 데이터베이스 파일 찾기 및 시간 측정
+db_filename = 'AHU_Selection_Master_DB.csv'
+if not os.path.exists(db_filename):
+    current_dir = os.getcwd()
+    files = [f for f in os.listdir(current_dir) if f.lower().endswith('.csv')]
+    if files:
+        db_filename = files[0]
 
-# 🌟 [PDF 클래스 확장]: 하단 고정 저작권/연락처 푸터
-class RootAirPDF(FPDF):
-    def footer(self):
-        self.set_y(-15)
-        try:
-            self.set_font("Malgun", style="", size=8)
-        except:
-            self.set_font("helvetica", style="", size=8)
-        self.set_text_color(148, 163, 184)
-        footer_text = "Copyright © RootAir ALL RIGHTS RESERVED. | Tel: +82-02-2082-7654 | Email: rootair@rootair.co.kr"
-        self.cell(190, 10, txt=footer_text, border=0, ln=False, align="C")
-
-# 🌟 [PDF 생성 함수]: 프로젝트 정보 + 설계 조건 + 고도화된 외형 사양 일괄 출력 양식
-def generate_pdf(model_name, specs_list, input_conditions, project_info):
-    pdf = RootAirPDF()
-    pdf.add_page()
-    
-    font_name = "malgun.ttf"
-    font_path = os.path.join(os.getcwd(), font_name)
-    
-    if not os.path.exists(font_path):
-        font_path = "C:\\Windows\\Fonts\\malgun.ttf"
-        
-    has_korean = False
-    try:
-        if os.path.exists(font_path):
-            pdf.add_font("Malgun", "", font_path)
-            pdf.add_font("Malgun", "B", font_path)
-            pdf.set_font("Malgun", size=11)
-            has_korean = True
-        else:
-            pdf.set_font("helvetica", size=11)
-    except:
-        pdf.set_font("helvetica", size=11)
-
-    # 1. 상단 듀얼 로고 대칭 배치 (크기 일치 가로 30mm)
-    if os.path.exists("company_logo.png"):
-        pdf.image("company_logo.png", x=10, y=10, w=30)
-    if os.path.exists("ahri_logo.png"):
-        pdf.image("ahri_logo.png", x=170, y=10, w=30)
-        
-    pdf.set_y(22)
-
-    # 2. 문서 메인 헤더
-    if has_korean:
-        pdf.set_font("Malgun", style="", size=22)
-        pdf.set_text_color(30, 41, 59)
-        pdf.cell(190, 12, txt="루트에어 AHU 장비 선정 성적서", ln=True, align="C")
-        
-        pdf.set_font("Malgun", style="", size=9)
-        pdf.set_text_color(100, 116, 139)
-        pdf.cell(190, 5, txt="RootAir Inc. | Technical Selection Report", ln=True, align="C")
-    else:
-        pdf.set_font("helvetica", style="B", size=20)
-        pdf.set_text_color(30, 41, 59)
-        pdf.cell(190, 12, txt="RootAir Inc. - AHU Technical Report", ln=True, align="C")
-    pdf.ln(10)
-    
-    # 3. 프로젝트 관리 정보 표
-    if has_korean:
-        pdf.set_font("Malgun", style="", size=11)
-        pdf.set_text_color(15, 23, 42)
-        
-        pdf.set_fill_color(248, 250, 252)
-        pdf.cell(30, 7, txt=" 프로젝트명", border=1, fill=True)
-        pdf.cell(75, 7, txt=f" {project_info['project_name']}", border=1)
-        pdf.cell(25, 7, txt=" 작성자", border=1, fill=True)
-        pdf.cell(60, 7, txt=f" {project_info['author']}", border=1, ln=True)
-        
-        pdf.cell(30, 7, txt=" 선정 일자", border=1, fill=True)
-        pdf.cell(160, 7, txt=f" {project_info['date']}", border=1, ln=True)
-    pdf.ln(8)
-    
-    # 4. 설계 입력 조건 요약 (구조 형태 추가 표시 🌟)
-    if has_korean:
-        pdf.set_font("Malgun", style="", size=13)
-        pdf.set_text_color(15, 23, 42)
-        pdf.cell(190, 8, txt="[1] 설계 입력 조건 (Design Input)", ln=True, align="L")
-        pdf.set_font("Malgun", style="", size=10)
-    else:
-        pdf.set_font("helvetica", style="B", size=12)
-        pdf.cell(190, 8, txt="[1] Design Input Conditions", ln=True, align="L")
-        pdf.set_font("helvetica", size=10)
-        
-    pdf.cell(45, 8, txt=" Required Air Flow:", border=1)
-    pdf.cell(50, 8, txt=f" {input_conditions['cmh']:,} CMH", border=1)
-    pdf.cell(45, 8, txt=" Cooling Load:", border=1)
-    pdf.cell(50, 8, txt=f" {input_conditions['cool']:,} kcal/h", border=1, ln=True)
-    
-    pdf.cell(45, 8, txt=" Heating Load:", border=1)
-    pdf.cell(50, 8, txt=f" {input_conditions['heat']:,} kcal/h", border=1)
-    pdf.cell(45, 8, txt=" Unit Layout Type:", border=1)
-    pdf.cell(50, 8, txt=f" {input_conditions['ahu_type_label']}", border=1, ln=True)
-    pdf.ln(10)
-    
-    # 5. 선정 결과 상세 사양 명세 (표 높이를 7mm로 컴팩트하게 조정하여 단일 페이지 최적화 🌟)
-    if has_korean:
-        pdf.set_font("Malgun", style="", size=13)
-        pdf.cell(190, 8, txt=f"[2] 추천 모델 상세 기술 규격 명세: {model_name}", ln=True, align="L")
-        pdf.set_font("Malgun", style="", size=10)
-    else:
-        pdf.set_font("helvetica", style="B", size=12)
-        pdf.cell(190, 8, txt=f"[2] Technical Specification: {model_name}", ln=True, align="L")
-        pdf.set_font("helvetica", style="B", size=10)
-        
-    pdf.set_fill_color(241, 245, 249)
-    pdf.cell(75, 7, txt=" Specification Item", border=1, fill=True)
-    pdf.cell(115, 7, txt=" Technical Data", border=1, fill=True, ln=True)
-    
-    if has_korean:
-        pdf.set_font("Malgun", style="", size=9.5)
-    else:
-        pdf.set_font("helvetica", size=9.5)
-        
-    for spec, val in specs_list:
-        pdf.cell(75, 7, txt=f" {spec}", border=1)
-        pdf.cell(115, 7, txt=f" {val}", border=1, ln=True)
-        
-    pdf.ln(10)
-    if has_korean:
-        pdf.set_font("Malgun", style="", size=9)
-        pdf.set_text_color(148, 163, 184)
-        pdf.cell(190, 5, txt="* 본 성적서는 데이터베이스 규격에 따라 시스템 알고리즘에 의해 자동 생성된 공식 기술 문서입니다.", ln=True, align="C")
-    
-    pdf_output = pdf.output()
-    if isinstance(pdf_output, str):
-        return pdf_output.encode('latin1')
-    return bytes(pdf_output)
-
-if df is None:
-    st.error("❌ 데이터베이스(CSV) 파일을 찾을 수 없거나 열 사양이 올바르지 않습니다.")
+if os.path.exists(db_filename):
+    df = load_data(db_filename, os.path.getmtime(db_filename))
 else:
-    # 상단 로고 및 타이틀 정렬 바
-    if os.path.exists("company_logo.png"):
-        import base64
-        with open("company_logo.png", "rb") as image_file:
-            encoded_logo = base64.b64encode(image_file.read()).decode()
-        
-        st.markdown(f"""
-            <div class="title-container">
-                <img src="data:image/png;base64,{encoded_logo}" alt="Company Logo">
-                <h1>루트에어 AHU Selection Program</h1>
-            </div>
-            """, unsafe_allow_html=True)
-    else:
-        st.title("루트에어 AHU Selection Program")
-        
-    st.caption(f"📊 Connected Database: {os.path.basename('AHU_Selection_Master_DB.csv')}")
-    st.write("---")
+    df = None
 
-    # 화면 분할
+# 🌟 [안전 가드 신설]: 구버전 데이터가 캐싱되어 있거나 열이 누락되었을 때 친절한 에러 안내
+if df is None:
+    st.error("❌ 데이터베이스(CSV) 파일을 찾을 수 없습니다. 'AHU_Selection_Master_DB.csv' 파일이 저장소에 있는지 확인해 주세요.")
+elif 'Type_H_HI' not in df.columns:
+    st.error("❌ [알림] 인터넷 서버가 아직 구버전 CSV 파일의 기억을 붙잡고 있습니다. 최신 CSV 파일이 깃허브에 정상 업로드 완료되었다면, 스트림릿 창 우측 하단의 [Manage app] ➡️ 새로 뜨는 창의 세로 점 3개 ➡️ [Clear cache] 버튼을 눌러 기억을 초기화해 주세요!")
+else:
+    # --- 이하 정상 메인 로직 가동 ---
+
+    # 하단 고정 저작권/연락처 푸터
+    class RootAirPDF(FPDF):
+        def footer(self):
+            self.set_y(-15)
+            try:
+                self.set_font("Malgun", style="", size=8)
+            except:
+                self.set_font("helvetica", style="", size=8)
+            self.set_text_color(148, 163, 184)
+            footer_text = "Copyright © RootAir ALL RIGHTS RESERVED. | Tel: +82-02-2082-7654 | Email: rootair@rootair.co.kr"
+            self.cell(190, 10, txt=footer_text, border=0, ln=False, align="C")
+
+    # PDF 생성 함수
+    def generate_pdf(model_name, specs_list, input_conditions, project_info):
+        pdf = RootAirPDF()
+        pdf.add_page()
+        
+        font_name = "malgun.ttf"
+        font_path = os.path.join(os.getcwd(), font_name)
+        
+        if not os.path.exists(font_path):
+            font_path = "C:\\Windows\\Fonts\\malgun.ttf"
+            
+        has_korean = False
+        try:
+            if os.path.exists(font_path):
+                pdf.add_font("Malgun", "", font_path)
+                pdf.add_font("Malgun", "B", font_path)
+                pdf.set_font("Malgun", size=11)
+                has_korean = True
+            else:
+                pdf.set_font("helvetica", size=11)
+        except:
+            pdf.set_font("helvetica", size=11)
+
+        if os.path.exists("company_logo.png"):
+            pdf.image("company_logo.png", x=10, y=10, w=30)
+        if os.path.exists("ahri_logo.png"):
+            pdf.image("ahri_logo.png", x=170, y=10, w=30)
+            
+        pdf.set_y(22)
+
+        if has_korean:
+            pdf.set_font("Malgun", style="", size=22)
+            pdf.set_text_color(30, 41, 59)
+            pdf.cell(190, 12, txt="루트에어 AHU 장비 선정 성적서", ln=True, align="C")
+            
+            pdf.set_font("Malgun", style="", size=9)
+            pdf.set_text_color(100, 116, 139)
+            pdf.cell(190, 5, txt="RootAir Inc. | Technical Selection Report", ln=True, align="C")
+        else:
+            pdf.set_font("helvetica", style="B", size=20)
+            pdf.set_text_color(30, 41, 59)
+            pdf.cell(190, 12, txt="RootAir Inc. - AHU Technical Report", ln=True, align="C")
+        pdf.ln(10)
+        
+        if has_korean:
+            pdf.set_font("Malgun", style="", size=11)
+            pdf.set_text_color(15, 23, 42)
+            
+            pdf.set_fill_color(248, 250, 252)
+            pdf.cell(30, 7, txt=" 프로젝트명", border=1, fill=True)
+            pdf.cell(75, 7, txt=f" {project_info['project_name']}", border=1)
+            pdf.cell(25, 7, txt=" 작성자", border=1, fill=True)
+            pdf.cell(60, 7, txt=f" {project_info['author']}", border=1, ln=True)
+            
+            pdf.cell(30, 7, txt=" 선정 일자", border=1, fill=True)
+            pdf.cell(160, 7, txt=f" {project_info['date']}", border=1, ln=True)
+        pdf.ln(8)
+        
+        if has_korean:
+            pdf.set_font("Malgun", style="", size=13)
+            pdf.set_text_color(15, 23, 42)
+            pdf.cell(190, 8, txt="[1] 설계 입력 조건 (Design Input)", ln=True, align="L")
+            pdf.set_font("Malgun", style="", size=10)
+        else:
+            pdf.set_font("helvetica", style="B", size=12)
+            pdf.cell(190, 8, txt="[1] Design Input Conditions", ln=True, align="L")
+            pdf.set_font("helvetica", size=10)
+            
+        pdf.cell(45, 8, txt=" Required Air Flow:", border=1)
+        pdf.cell(50, 8, txt=f" {input_conditions['cmh']:,} CMH", border=1)
+        pdf.cell(45, 8, txt=" Cooling Load:", border=1)
+        pdf.cell(50, 8, txt=f" {input_conditions['cool']:,} kcal/h", border=1, ln=True)
+        
+        pdf.cell(45, 8, txt=" Heating Load:", border=1)
+        pdf.cell(50, 8, txt=f" {input_conditions['heat']:,} kcal/h", border=1)
+        pdf.cell(45, 8, txt=" Unit Layout Type:", border=1)
+        pdf.cell(50, 8, txt=f" {input_conditions['ahu_type_label']}", border=1, ln=True)
+        pdf.ln(10)
+        
+        if has_korean:
+            pdf.set_font("Malgun", style="", size=13)
+            pdf.cell(190, 8, txt=f"[2] 추천 모델 상세 기술 규격 명세: {model_name}", ln=True, align="L")
+            pdf.set_font("Malgun", style="", size=10)
+        else:
+            pdf.set_font("helvetica", style="B", size=12)
+            pdf.cell(190, 8, txt=f"[2] Technical Specification: {model_name}", ln=True, align="L")
+            pdf.set_font("helvetica", style="B", size=10)
+            
+        pdf.set_fill_color(241, 245, 249)
+        pdf.cell(75, 7, txt=" Specification Item", border=1, fill=True)
+        pdf.cell(115, 7, txt=" Technical Data", border=1, fill=True, ln=True)
+        
+        if has_korean:
+            pdf.set_font("Malgun", style="", size=9.5)
+        else:
+            pdf.set_font("helvetica", size=9.5)
+            
+        for spec, val in specs_list:
+            pdf.cell(75, 7, txt=f" {spec}", border=1)
+            pdf.cell(115, 7, txt=f" {val}", border=1, ln=True)
+            
+        pdf.ln(10)
+        if has_korean:
+            pdf.set_font("Malgun", style="", size=9)
+            pdf.set_text_color(148, 163, 184)
+            pdf.cell(190, 5, txt="* 본 성적서는 데이터베이스 규격에 따라 시스템 알고리즘에 의해 자동 생성된 공식 기술 문서입니다.", ln=True, align="C")
+        
+        pdf_output = pdf.output()
+        if isinstance(pdf_output, str):
+            return pdf_output.encode('latin1')
+        return bytes(pdf_output)
+
+    # 화면 레이아웃 시작
+    # 분할
     col_input, col_result = st.columns([1, 2], gap="large")
 
     with col_input:
@@ -225,7 +213,6 @@ else:
         st.write("---")
         st.subheader("2. 설계 조건 입력 (Input)")
         
-        # 🌟 [신규 추가]: H형과 HI형을 사용자가 직접 라디오 버튼으로 분기 선택할 수 있는 폼 추가
         ahu_type = st.radio("공조기 레이아웃 구조 선택", ["H형 (단일팬 컴팩트형)", "HI형 (환기팬 내장 풀스펙형)"])
         selected_type = "H" if "H형" in ahu_type else "HI"
         
@@ -272,7 +259,6 @@ else:
             c_name = st.session_state['p_name']
             c_author = st.session_state['p_author']
             
-            # 🌟 [매칭 로직 수정]: 사용자가 선택한 H/HI구조 조건으로 1차 필터링 후 풍량/열부하 탐색
             type_filtered_df = df[df['Type_H_HI'] == curr_selected_type]
             
             candidates = type_filtered_df[(type_filtered_df['Range_CMH_Min'] <= curr_cmh) & (curr_cmh <= type_filtered_df['Range_CMH_Max'])]
@@ -309,7 +295,6 @@ else:
                 with col_m1:
                     st.metric(label="✨ 추천 모델명", value=selected_row['Model_Name'])
                 
-                # 🌟 [사양 데이터 세트 전면 확장]: 새로 추가된 외형 치수 및 접속관 크기 배열 매칭 완료
                 specs_list = [
                     ("표준 정격 풍량", f"{int(selected_row['STD_CMH']):,} CMH ({int(selected_row['Std_CMM'])} CMM)"),
                     ("적정 풍량 범위", f"{int(selected_row['Range_CMH_Min']):,} ~ {int(selected_row['Range_CMH_Max']):,} CMH"),
@@ -332,7 +317,6 @@ else:
                     ("냉온수 배관 관경", f"{int(selected_row['Conn_Cool_In_Out_A'])} A × {int(selected_row['Conn_Cool_Qty'])} 개")
                 ]
 
-                # PDF 구울 때 구조 레이아웃 한글 라벨 묶음 전달
                 input_conditions = {
                     'cmh': curr_cmh, 
                     'cool': curr_cool, 
@@ -361,4 +345,4 @@ else:
             else:
                 st.error("❌ 에러: 요구하는 설계 사양이 너무 커서 데이터베이스 내에 매칭 가능한 루트에어 모델이 없습니다.")
         else:
-            st.info("💡 좌측 입력창에 프로젝트 명칭 및 설계 조건을 입력한 후 [최적 장비 선정하기] 버튼을 누르세요.")
+            st.info("💡 좌측 입력창에 정보를 입력한 후 [최적 장비 선정하기] 버튼을 누르세요.")
