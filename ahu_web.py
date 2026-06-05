@@ -3,6 +3,7 @@ import csv
 import pandas as pd
 import streamlit as st
 from fpdf import FPDF
+from datetime import datetime
 
 # 웹페이지 기본 설정
 st.set_page_config(
@@ -33,7 +34,6 @@ st.markdown("""
     }
     .stButton>button { width: 100%; font-weight: bold; background-color: #38BDF8 !important; color: #0F172A !important; border: none !important; }
     .stButton>button:hover { background-color: #0EA5E9 !important; }
-    /* PDF 다운로드 버튼 스타일 */
     .stDownloadButton>button { width: 100%; font-weight: bold; background-color: #10B981 !important; color: #FFFFFF !important; border: none !important; }
     .stDownloadButton>button:hover { background-color: #059669 !important; }
     </style>
@@ -63,8 +63,8 @@ def load_data():
 
 df = load_data()
 
-# 🌟 [PDF 생성 함수]: style="B" 에러 요소를 완벽히 제거하고 폰트 사이즈로 레이아웃 최적화
-def generate_pdf(model_name, specs_list, input_conditions):
+# 🌟 [PDF 생성 함수]: 프로젝트 정보(날짜, 프로젝트명, 작성자) 레이아웃 추가 반영
+def generate_pdf(model_name, specs_list, input_conditions, project_info):
     pdf = FPDF()
     pdf.add_page()
     
@@ -77,7 +77,6 @@ def generate_pdf(model_name, specs_list, input_conditions):
     has_korean = False
     try:
         if os.path.exists(font_path):
-            # 에러 방지를 위해 일반(클리어) 스타일과 굵은(B) 스타일 호출 시 모두 하나의 폰트 파일을 바라보도록 안전 장치 이중화
             pdf.add_font("Malgun", "", font_path)
             pdf.add_font("Malgun", "B", font_path)
             pdf.set_font("Malgun", size=11)
@@ -87,9 +86,9 @@ def generate_pdf(model_name, specs_list, input_conditions):
     except:
         pdf.set_font("helvetica", size=11)
 
-    # 1. 문서 헤더 (style="B"를 공백""으로 수정하여 크래시 차단 ✨)
+    # 1. 문서 헤더
     if has_korean:
-        pdf.set_font("Malgun", style="", size=22) # 사이즈를 키워 제목 강조
+        pdf.set_font("Malgun", style="", size=22)
         pdf.set_text_color(30, 41, 59)
         pdf.cell(190, 15, txt="루트에어 AHU 장비 선정 성적서", ln=True, align="C")
         
@@ -100,11 +99,27 @@ def generate_pdf(model_name, specs_list, input_conditions):
         pdf.set_font("helvetica", style="B", size=20)
         pdf.set_text_color(30, 41, 59)
         pdf.cell(190, 15, txt="ROOT AIR - AHU Technical Report", ln=True, align="C")
-    pdf.ln(10)
+    pdf.ln(8)
     
-    # 2. 설계 조건 요약
+    # 🌟 [신규 추가] 2. 프로젝트 관리 정보 표 (날짜, 프로젝트명, 작성자)
     if has_korean:
-        pdf.set_font("Malgun", style="", size=13) # 크기 향상으로 섹션 구분
+        pdf.set_font("Malgun", style="", size=11)
+        pdf.set_text_color(15, 23, 42)
+        
+        # 우측 상단 정렬 효과를 위한 빈 셀 활용 또는 컴팩트한 배치
+        pdf.set_fill_color(248, 250, 252) # 매우 연한 회색 배경
+        pdf.cell(30, 7, txt=" 프로젝트명", border=1, fill=True)
+        pdf.cell(75, 7, txt=f" {project_info['project_name']}", border=1)
+        pdf.cell(25, 7, txt=" 작성자", border=1, fill=True)
+        pdf.cell(60, 7, txt=f" {project_info['author']}", border=1, ln=True)
+        
+        pdf.cell(30, 7, txt=" 선정 일자", border=1, fill=True)
+        pdf.cell(160, 7, txt=f" {project_info['date']}", border=1, ln=True)
+    pdf.ln(8)
+    
+    # 3. 설계 조건 요약
+    if has_korean:
+        pdf.set_font("Malgun", style="", size=13)
         pdf.set_text_color(15, 23, 42)
         pdf.cell(190, 8, txt="[1] 설계 입력 조건 (Design Input)", ln=True, align="L")
         pdf.set_font("Malgun", style="", size=10)
@@ -124,7 +139,7 @@ def generate_pdf(model_name, specs_list, input_conditions):
     pdf.cell(50, 8, txt=f" {input_conditions['heat_type']}", border=1, ln=True)
     pdf.ln(10)
     
-    # 3. 선정 결과 상세 사양표
+    # 4. 선정 결과 상세 사양표
     if has_korean:
         pdf.set_font("Malgun", style="", size=13)
         pdf.cell(190, 8, txt=f"[2] 추천 모델 사양 명세: {model_name}", ln=True, align="L")
@@ -183,7 +198,14 @@ else:
     col_input, col_result = st.columns([1, 2], gap="large")
 
     with col_input:
-        st.subheader("1. 설계 조건 입력 (Input)")
+        # 🌟 [인적사항 레이아웃 변경] 설계 조건 입력단 최상단에 프로젝트 정보 입력 필드 추가
+        st.subheader("1. 프로젝트 정보 입력")
+        proj_date = st.date_input("선정 일자", datetime.now())
+        proj_name = st.text_input("프로젝트 명", placeholder="예: OO빌딩 신축공사")
+        proj_author = st.text_input("작성자", placeholder="예: 홍길동 팀장")
+        
+        st.write("---")
+        st.subheader("2. 설계 조건 입력 (Input)")
         
         cmh = st.number_input("필요 풍량 (CMH)", value=4500, step=100)
         cool_req = st.number_input("요구 냉방부하 (kcal/h)", value=35000, step=1000)
@@ -202,7 +224,7 @@ else:
             st.image("ahri_logo.png", caption="AHRI Certified Performance", width=140)
 
     with col_result:
-        st.subheader("2. 최적 모델 선정 결과 (Output)")
+        st.subheader("3. 최적 모델 선정 결과 (Output)")
         st.write("")
 
         if submit_btn or st.session_state.get('pdf_ready', False):
@@ -212,11 +234,20 @@ else:
                 st.session_state['cool_val'] = cool_req
                 st.session_state['heat_val'] = heat_req
                 st.session_state['heat_type_val'] = heat_type
+                # 프로젝트 메타 정보 세션에 박제
+                st.session_state['p_date'] = proj_date.strftime("%Y년 %m월 %d일")
+                st.session_state['p_name'] = proj_name if proj_name else "미지정 프로젝트"
+                st.session_state['p_author'] = proj_author if proj_author else "담당자"
             
             curr_cmh = st.session_state['cmh_val']
             curr_cool = st.session_state['cool_val']
             curr_heat = st.session_state['heat_val']
             curr_type = st.session_state['heat_type_val']
+            
+            # 메타 정보 로드
+            c_date = st.session_state['p_date']
+            c_name = st.session_state['p_name']
+            c_author = st.session_state['p_author']
             
             candidates = df[(df['Range_CMH_Min'] <= curr_cmh) & (curr_cmh <= df['Range_CMH_Max'])]
             if candidates.empty:
@@ -246,6 +277,9 @@ else:
                 else:
                     st.warning(status_msg)
 
+                # 🌟 화면상에도 입력한 프로젝트 정보를 깔끔한 카드로 요약 표시
+                st.info(f"📋 **Project:** {c_name} | 👤 **Author:** {c_author} | 📅 **Date:** {c_date}")
+
                 col_m1, col_m2 = st.columns([1, 1])
                 with col_m1:
                     st.metric(label="✨ 추천 모델명", value=selected_row['Model_Name'])
@@ -267,15 +301,17 @@ else:
                     ("냉온수 관경", f"{int(selected_row['Conn_Cool_In_Out_A'])} A x {int(selected_row['Conn_Cool_Qty'])} 개")
                 ]
 
+                # PDF 구울 때 프로젝트 메타 데이터 묶어서 전달 🌟
                 input_conditions = {'cmh': curr_cmh, 'cool': curr_cool, 'heat': curr_heat, 'heat_type': curr_type}
-                pdf_bytes = generate_pdf(selected_row['Model_Name'], specs_list, input_conditions)
+                project_info = {'date': c_date, 'project_name': c_name, 'author': c_author}
+                pdf_bytes = generate_pdf(selected_row['Model_Name'], specs_list, input_conditions, project_info)
                 
                 with col_m2:
                     st.write("") 
                     st.download_button(
                         label="📄 장비 선정 성적서 다운로드 (PDF)",
                         data=pdf_bytes,
-                        file_name=f"루트에어_AHU_선정성적서_{selected_row['Model_Name']}.pdf",
+                        file_name=f"루트에어_AHU_선정성적서_{c_name}_{selected_row['Model_Name']}.pdf",
                         mime="application/pdf"
                     )
 
@@ -288,4 +324,4 @@ else:
             else:
                 st.error("❌ 에러: 요구하는 열부하 용량이 너무 커서 데이터베이스 내에 매칭 가능한 모델이 없습니다.")
         else:
-            st.info("💡 좌측 입력창에 설계 조건을 입력한 후 [최적 장비 선정하기] 버튼을 누르세요.")
+            st.info("💡 좌측 입력창에 정보를 입력한 후 [최적 장비 선정하기] 버튼을 누르세요.")
