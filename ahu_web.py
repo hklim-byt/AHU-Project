@@ -33,7 +33,7 @@ st.markdown("""
     }
     .stButton>button { width: 100%; font-weight: bold; background-color: #38BDF8 !important; color: #0F172A !important; border: none !important; }
     .stButton>button:hover { background-color: #0EA5E9 !important; }
-    /* PDF 다운로드 버튼 스타일 (녹색 포인트) */
+    /* PDF 다운로드 버튼 스타일 (시인성 좋은 녹색 배치) */
     .stDownloadButton>button { width: 100%; font-weight: bold; background-color: #10B981 !important; color: #FFFFFF !important; border: none !important; }
     .stDownloadButton>button:hover { background-color: #059669 !important; }
     </style>
@@ -63,72 +63,89 @@ def load_data():
 
 df = load_data()
 
-# 🌟 [PDF 생성 함수] 한글 깨짐 방지 및 루트에어 전용 성적서 폼 구성
+# 🌟 [PDF 생성 함수 구조 개선]: 서버와 로컬 환경 모두에서 안전하게 한글 폰트 로딩
 def generate_pdf(model_name, specs_list, input_conditions):
     pdf = FPDF()
     pdf.add_page()
     
-    # 한글 폰트 등록 (윈도우 시스템 맑은 고딕 사용)
-    # Streamlit Cloud 환경에서도 한글이 깨지지 않도록 기본 내장 폰트 경로를 유연하게 탐색합니다.
-    font_path = "C:\\Windows\\Fonts\\malgun.ttf"
+    # [수정]: 윈도우 고정 경로 대신, 현재 프로그램이 실행 중인 폴더 안의 malgun.ttf 파일을 우선 탐색합니다.
+    font_name = "malgun.ttf"
+    font_path = os.path.join(os.getcwd(), font_name)
+    
+    # 만약 폴더 안에 없고 내 컴퓨터(윈도우)에서 돌릴 때를 대비한 백업 경로 추가
     if not os.path.exists(font_path):
-        font_path = "malgun.ttf" # 로컬에 따로 폰트가 있을 경우 대비
+        font_path = "C:\\Windows\\Fonts\\malgun.ttf"
         
     try:
-        pdf.add_font("Malgun", "", font_path)
-        pdf.set_font("Malgun", size=11)
+        # 파일이 존재하는지 확실히 체크 후 폰트 등록
+        if os.path.exists(font_path):
+            pdf.add_font("Malgun", "", font_path)
+            pdf.set_font("Malgun", size=11)
+        else:
+            # 폰트 파일이 아예 안 올라왔을 때 최후의 보루 (영어 기본 폰트로 튕김 에러 방지)
+            pdf.set_font("helvetica", size=11)
     except:
-        # 서버 환경에서 시스템 폰트를 못 찾을 때를 대비한 코어 에러 방지 (기본 폰트 사용)
         pdf.set_font("helvetica", size=11)
 
-    # 1. 문서 헤더 (루트에어 타이틀)
-    pdf.set_font("Malgun", style="B", size=20)
-    pdf.set_text_color(30, 41, 59) # 엔지니어링 다크 블루
-    pdf.cell(190, 15, txt="루트에어 AHU 장비 선정 성적서", ln=True, align="C")
-    
-    pdf.set_font("Malgun", size=9)
-    pdf.set_text_color(100, 116, 139)
-    pdf.cell(190, 5, txt="ROOT AIR CO., LTD. | Technical Selection Report", ln=True, align="C")
+    # 1. 문서 헤더
+    try:
+        pdf.set_font("Malgun", style="B", size=20)
+        pdf.set_text_color(30, 41, 59)
+        pdf.cell(190, 15, txt="루트에어 AHU 장비 선정 성적서", ln=True, align="C")
+        
+        pdf.set_font("Malgun", size=9)
+        pdf.set_text_color(100, 116, 139)
+        pdf.cell(190, 5, txt="ROOT AIR CO., LTD. | Technical Selection Report", ln=True, align="C")
+    except:
+        # 한글 깨짐 방지 폰트가 안 맞을 경우 영어 헤더 출력
+        pdf.set_font("helvetica", style="B", size=20)
+        pdf.cell(190, 15, txt="ROOT AIR - AHU Technical Report", ln=True, align="C")
     pdf.ln(10)
     
-    # 2. 설계 조건 (Input Conditions) 요약 섹션
-    pdf.set_font("Malgun", style="B", size=12)
-    pdf.set_text_color(15, 23, 42)
-    pdf.cell(190, 8, txt="[1] 설계 입력 조건 (Design Input)", ln=True, align="L")
-    pdf.set_font("Malgun", size=10)
-    
-    # 격자 형태로 입력 조건 배치
-    pdf.cell(45, 8, txt=" 필요 풍량:", border=1)
-    pdf.cell(50, 8, txt=f" {input_conditions['cmh']:,} CMH", border=1)
-    pdf.cell(45, 8, txt=" 요구 냉방부하:", border=1)
-    pdf.cell(50, 8, txt=f" {input_conditions['cool']:,} kcal/h", border=1, ln=True)
-    
-    pdf.cell(45, 8, txt=" 요구 난방부하:", border=1)
-    pdf.cell(50, 8, txt=f" {input_conditions['heat']:,} kcal/h", border=1)
-    pdf.cell(45, 8, txt=" 난방 코일 열원:", border=1)
-    pdf.cell(50, 8, txt=f" {input_conditions['heat_type']}", border=1, ln=True)
+    # 2. 설계 조건 요약
+    try:
+        pdf.set_font("Malgun", style="B", size=12)
+        pdf.set_text_color(15, 23, 42)
+        pdf.cell(190, 8, txt="[1] 설계 입력 조건 (Design Input)", ln=True, align="L")
+        pdf.set_font("Malgun", size=10)
+        
+        pdf.cell(45, 8, txt=" Required Air Flow:", border=1)
+        pdf.cell(50, 8, txt=f" {input_conditions['cmh']:,} CMH", border=1)
+        pdf.cell(45, 8, txt=" Cooling Load:", border=1)
+        pdf.cell(50, 8, txt=f" {input_conditions['cool']:,} kcal/h", border=1, ln=True)
+        
+        pdf.cell(45, 8, txt=" Heating Load:", border=1)
+        pdf.cell(50, 8, txt=f" {input_conditions['heat']:,} kcal/h", border=1)
+        pdf.cell(45, 8, txt=" Heating Source:", border=1)
+        pdf.cell(50, 8, txt=f" {input_conditions['heat_type']}", border=1, ln=True)
+    except:
+        pass
     pdf.ln(10)
     
-    # 3. 선정 결과 상세 사양표 섹션
-    pdf.set_font("Malgun", style="B", size=12)
-    pdf.cell(190, 8, txt=f"[2] 최적 추천 모델 사양 명세: {model_name}", ln=True, align="L")
-    
-    # 표 헤더
-    pdf.set_font("Malgun", style="B", size=10)
-    pdf.set_fill_color(241, 245, 249) # 연한 회색 배경
-    pdf.cell(70, 8, txt=" 사양 항목", border=1, fill=True)
-    pdf.cell(120, 8, txt=" 기술 상세 데이터", border=1, fill=True, ln=True)
-    
-    # 표 내용 다듬기
-    pdf.set_font("Malgun", size=10)
-    for spec, val in specs_list:
-        pdf.cell(70, 8, txt=f" {spec}", border=1)
-        pdf.cell(120, 8, txt=f" {val}", border=1, ln=True)
+    # 3. 선정 결과 상세 사양표
+    try:
+        pdf.set_font("Malgun", style="B", size=12)
+        pdf.cell(190, 8, txt=f"[2] 추천 모델 사양 명세: {model_name}", ln=True, align="L")
+        
+        pdf.set_font("Malgun", style="B", size=10)
+        pdf.set_fill_color(241, 245, 249)
+        pdf.cell(70, 8, txt=" 사양 항목 (Specification)", border=1, fill=True)
+        pdf.cell(120, 8, txt=" 기술 상세 데이터 (Technical Data)", border=1, fill=True, ln=True)
+        
+        pdf.set_font("Malgun", size=10)
+        for spec, val in specs_list:
+            pdf.cell(70, 8, txt=f" {spec}", border=1)
+            pdf.cell(120, 8, txt=f" {val}", border=1, ln=True)
+    except:
+        pass
         
     pdf.ln(15)
-    pdf.set_font("Malgun", size=9)
-    pdf.set_text_color(148, 163, 184)
-    pdf.cell(190, 5, txt="* 본 성적서는 데이터베이스 기준 알고리즘에 의해 자동 생성된 기술 문서입니다.", ln=True, align="C")
+    try:
+        pdf.set_font("Malgun", size=9)
+        pdf.set_text_color(148, 163, 184)
+        pdf.cell(190, 5, txt="* 본 성적서는 데이터베이스 기준 알고리즘에 의해 자동 생성된 기술 문서입니다.", ln=True, align="C")
+    except:
+        pass
     
     return pdf.output()
 
@@ -180,7 +197,6 @@ else:
         st.write("")
 
         if submit_btn or st.session_state.get('pdf_ready', False):
-            # 세션 상태 보존을 위한 스위치 켜기
             if submit_btn:
                 st.session_state['pdf_ready'] = True
                 st.session_state['cmh_val'] = cmh
@@ -188,7 +204,6 @@ else:
                 st.session_state['heat_val'] = heat_req
                 st.session_state['heat_type_val'] = heat_type
             
-            # 보존된 데이터 가져오기
             curr_cmh = st.session_state['cmh_val']
             curr_cool = st.session_state['cool_val']
             curr_heat = st.session_state['heat_val']
@@ -222,12 +237,10 @@ else:
                 else:
                     st.warning(status_msg)
 
-                # 메트릭 정렬 레이아웃 분할
                 col_m1, col_m2 = st.columns([1, 1])
                 with col_m1:
                     st.metric(label="✨ 추천 모델명", value=selected_row['Model_Name'])
                 
-                # 사양 배열 구성
                 specs_list = [
                     ("표준 정격 풍량", f"{int(selected_row['STD_CMH']):,} CMH ({int(selected_row['Std_CMM'])} CMM)"),
                     ("적정 풍량 범위", f"{int(selected_row['Range_CMH_Min']):,} ~ {int(selected_row['Range_CMH_Max']):,} CMH"),
@@ -245,12 +258,11 @@ else:
                     ("냉온수 관경", f"{int(selected_row['Conn_Cool_In_Out_A'])} A x {int(selected_row['Conn_Cool_Qty'])} 개")
                 ]
 
-                # 🌟 [PDF 다운로드 버튼 배치] 사양 명세 바로 위에 초록색 버튼 추가
                 input_conditions = {'cmh': curr_cmh, 'cool': curr_cool, 'heat': curr_heat, 'heat_type': curr_type}
                 pdf_bytes = generate_pdf(selected_row['Model_Name'], specs_list, input_conditions)
                 
                 with col_m2:
-                    st.write("") # 간격 맞추기용
+                    st.write("") 
                     st.download_button(
                         label="📄 장비 선정 성적서 다운로드 (PDF)",
                         data=pdf_bytes,
