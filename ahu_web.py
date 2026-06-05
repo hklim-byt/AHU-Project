@@ -63,9 +63,24 @@ def load_data():
 
 df = load_data()
 
-# 🌟 [PDF 생성 함수]: 프로젝트 정보(날짜, 프로젝트명, 작성자) 레이아웃 추가 반영
+# 🌟 [PDF 클래스 확장]: 하단 고정 저작권/연락처 푸터를 위한 클래스 재정의
+class RootAirPDF(FPDF):
+    def footer(self):
+        # 페이지 하단에서 15mm 위로 이동
+        self.set_y(-15)
+        # 한글 폰트가 등록되어 있으면 사용, 없으면 기본 서체
+        try:
+            self.set_font("Malgun", style="", size=8)
+        except:
+            self.set_font("helvetica", style="", size=8)
+        # 요청하신 카피라이트 및 연락처 회색조 설정
+        self.set_text_color(148, 163, 184) # 슬레이트 회색
+        footer_text = "Copyright © RootAir ALL RIGHTS RESERVED. | Tel: +82-02-2082-7654 | Email: rootair@rootair.co.kr"
+        self.cell(190, 10, txt=footer_text, border=0, ln=False, align="C")
+
+# 🌟 [PDF 생성 함수]: 상단 듀얼 로고 대칭 배치 및 회사 영문명 변경 반영
 def generate_pdf(model_name, specs_list, input_conditions, project_info):
-    pdf = FPDF()
+    pdf = RootAirPDF() # 확장된 푸터 클래스 적용
     pdf.add_page()
     
     font_name = "malgun.ttf"
@@ -86,28 +101,36 @@ def generate_pdf(model_name, specs_list, input_conditions, project_info):
     except:
         pdf.set_font("helvetica", size=11)
 
-    # 1. 문서 헤더
+    # 🌟 [신규 추가] 1. 상단 로고 대칭 배치 영역 (좌측: 회사로고, 우측: AHRI마크)
+    # 두 로고의 가로 크기(30mm)와 세로 비율이 균형을 이루도록 정밀 배치
+    if os.path.exists("company_logo.png"):
+        pdf.image("company_logo.png", x=10, y=10, w=30)
+    if os.path.exists("ahri_logo.png"):
+        pdf.image("ahri_logo.png", x=170, y=10, w=30)
+        
+    pdf.set_y(22) # 로고 아래로 출력 높이 정렬
+
+    # 2. 문서 메인 헤더 (회사 영문명 변경 완료: RootAir Inc. ✨)
     if has_korean:
         pdf.set_font("Malgun", style="", size=22)
         pdf.set_text_color(30, 41, 59)
-        pdf.cell(190, 15, txt="루트에어 AHU 장비 선정 성적서", ln=True, align="C")
+        pdf.cell(190, 12, txt="루트에어 AHU 장비 선정 성적서", ln=True, align="C")
         
         pdf.set_font("Malgun", style="", size=9)
         pdf.set_text_color(100, 116, 139)
-        pdf.cell(190, 5, txt="ROOT AIR CO., LTD. | Technical Selection Report", ln=True, align="C")
+        pdf.cell(190, 5, txt="RootAir Inc. | Technical Selection Report", ln=True, align="C")
     else:
         pdf.set_font("helvetica", style="B", size=20)
         pdf.set_text_color(30, 41, 59)
-        pdf.cell(190, 15, txt="ROOT AIR - AHU Technical Report", ln=True, align="C")
-    pdf.ln(8)
+        pdf.cell(190, 12, txt="RootAir Inc. - AHU Technical Report", ln=True, align="C")
+    pdf.ln(10)
     
-    # 🌟 [신규 추가] 2. 프로젝트 관리 정보 표 (날짜, 프로젝트명, 작성자)
+    # 3. 프로젝트 관리 정보 표 (날짜, 프로젝트명, 작성자)
     if has_korean:
         pdf.set_font("Malgun", style="", size=11)
         pdf.set_text_color(15, 23, 42)
         
-        # 우측 상단 정렬 효과를 위한 빈 셀 활용 또는 컴팩트한 배치
-        pdf.set_fill_color(248, 250, 252) # 매우 연한 회색 배경
+        pdf.set_fill_color(248, 250, 252)
         pdf.cell(30, 7, txt=" 프로젝트명", border=1, fill=True)
         pdf.cell(75, 7, txt=f" {project_info['project_name']}", border=1)
         pdf.cell(25, 7, txt=" 작성자", border=1, fill=True)
@@ -117,7 +140,7 @@ def generate_pdf(model_name, specs_list, input_conditions, project_info):
         pdf.cell(160, 7, txt=f" {project_info['date']}", border=1, ln=True)
     pdf.ln(8)
     
-    # 3. 설계 조건 요약
+    # 4. 설계 조건 요약
     if has_korean:
         pdf.set_font("Malgun", style="", size=13)
         pdf.set_text_color(15, 23, 42)
@@ -139,7 +162,7 @@ def generate_pdf(model_name, specs_list, input_conditions, project_info):
     pdf.cell(50, 8, txt=f" {input_conditions['heat_type']}", border=1, ln=True)
     pdf.ln(10)
     
-    # 4. 선정 결과 상세 사양표
+    # 5. 선정 결과 상세 사양표
     if has_korean:
         pdf.set_font("Malgun", style="", size=13)
         pdf.cell(190, 8, txt=f"[2] 추천 모델 사양 명세: {model_name}", ln=True, align="L")
@@ -162,7 +185,7 @@ def generate_pdf(model_name, specs_list, input_conditions, project_info):
         pdf.cell(70, 8, txt=f" {spec}", border=1)
         pdf.cell(120, 8, txt=f" {val}", border=1, ln=True)
         
-    pdf.ln(15)
+    pdf.ln(12)
     if has_korean:
         pdf.set_font("Malgun", style="", size=9)
         pdf.set_text_color(148, 163, 184)
@@ -198,7 +221,6 @@ else:
     col_input, col_result = st.columns([1, 2], gap="large")
 
     with col_input:
-        # 🌟 [인적사항 레이아웃 변경] 설계 조건 입력단 최상단에 프로젝트 정보 입력 필드 추가
         st.subheader("1. 프로젝트 정보 입력")
         proj_date = st.date_input("선정 일자", datetime.now())
         proj_name = st.text_input("프로젝트 명", placeholder="예: OO빌딩 신축공사")
@@ -234,7 +256,6 @@ else:
                 st.session_state['cool_val'] = cool_req
                 st.session_state['heat_val'] = heat_req
                 st.session_state['heat_type_val'] = heat_type
-                # 프로젝트 메타 정보 세션에 박제
                 st.session_state['p_date'] = proj_date.strftime("%Y년 %m월 %d일")
                 st.session_state['p_name'] = proj_name if proj_name else "미지정 프로젝트"
                 st.session_state['p_author'] = proj_author if proj_author else "담당자"
@@ -244,7 +265,6 @@ else:
             curr_heat = st.session_state['heat_val']
             curr_type = st.session_state['heat_type_val']
             
-            # 메타 정보 로드
             c_date = st.session_state['p_date']
             c_name = st.session_state['p_name']
             c_author = st.session_state['p_author']
@@ -277,7 +297,6 @@ else:
                 else:
                     st.warning(status_msg)
 
-                # 🌟 화면상에도 입력한 프로젝트 정보를 깔끔한 카드로 요약 표시
                 st.info(f"📋 **Project:** {c_name} | 👤 **Author:** {c_author} | 📅 **Date:** {c_date}")
 
                 col_m1, col_m2 = st.columns([1, 1])
@@ -301,7 +320,6 @@ else:
                     ("냉온수 관경", f"{int(selected_row['Conn_Cool_In_Out_A'])} A x {int(selected_row['Conn_Cool_Qty'])} 개")
                 ]
 
-                # PDF 구울 때 프로젝트 메타 데이터 묶어서 전달 🌟
                 input_conditions = {'cmh': curr_cmh, 'cool': curr_cool, 'heat': curr_heat, 'heat_type': curr_type}
                 project_info = {'date': c_date, 'project_name': c_name, 'author': c_author}
                 pdf_bytes = generate_pdf(selected_row['Model_Name'], specs_list, input_conditions, project_info)
