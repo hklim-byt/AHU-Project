@@ -63,24 +63,21 @@ def load_data():
 
 df = load_data()
 
-# 🌟 [PDF 클래스 확장]: 하단 고정 저작권/연락처 푸터를 위한 클래스 재정의
+# 🌟 [PDF 클래스 확장]: 하단 고정 저작권/연락처 푸터
 class RootAirPDF(FPDF):
     def footer(self):
-        # 페이지 하단에서 15mm 위로 이동
         self.set_y(-15)
-        # 한글 폰트가 등록되어 있으면 사용, 없으면 기본 서체
         try:
             self.set_font("Malgun", style="", size=8)
         except:
             self.set_font("helvetica", style="", size=8)
-        # 요청하신 카피라이트 및 연락처 회색조 설정
-        self.set_text_color(148, 163, 184) # 슬레이트 회색
+        self.set_text_color(148, 163, 184)
         footer_text = "Copyright © RootAir ALL RIGHTS RESERVED. | Tel: +82-02-2082-7654 | Email: rootair@rootair.co.kr"
         self.cell(190, 10, txt=footer_text, border=0, ln=False, align="C")
 
-# 🌟 [PDF 생성 함수]: 상단 듀얼 로고 대칭 배치 및 회사 영문명 변경 반영
+# 🌟 [PDF 생성 함수]: 프로젝트 정보 + 설계 조건 + 고도화된 외형 사양 일괄 출력 양식
 def generate_pdf(model_name, specs_list, input_conditions, project_info):
-    pdf = RootAirPDF() # 확장된 푸터 클래스 적용
+    pdf = RootAirPDF()
     pdf.add_page()
     
     font_name = "malgun.ttf"
@@ -101,16 +98,15 @@ def generate_pdf(model_name, specs_list, input_conditions, project_info):
     except:
         pdf.set_font("helvetica", size=11)
 
-    # 🌟 [신규 추가] 1. 상단 로고 대칭 배치 영역 (좌측: 회사로고, 우측: AHRI마크)
-    # 두 로고의 가로 크기(30mm)와 세로 비율이 균형을 이루도록 정밀 배치
+    # 1. 상단 듀얼 로고 대칭 배치 (크기 일치 가로 30mm)
     if os.path.exists("company_logo.png"):
         pdf.image("company_logo.png", x=10, y=10, w=30)
     if os.path.exists("ahri_logo.png"):
         pdf.image("ahri_logo.png", x=170, y=10, w=30)
         
-    pdf.set_y(22) # 로고 아래로 출력 높이 정렬
+    pdf.set_y(22)
 
-    # 2. 문서 메인 헤더 (회사 영문명 변경 완료: RootAir Inc. ✨)
+    # 2. 문서 메인 헤더
     if has_korean:
         pdf.set_font("Malgun", style="", size=22)
         pdf.set_text_color(30, 41, 59)
@@ -125,7 +121,7 @@ def generate_pdf(model_name, specs_list, input_conditions, project_info):
         pdf.cell(190, 12, txt="RootAir Inc. - AHU Technical Report", ln=True, align="C")
     pdf.ln(10)
     
-    # 3. 프로젝트 관리 정보 표 (날짜, 프로젝트명, 작성자)
+    # 3. 프로젝트 관리 정보 표
     if has_korean:
         pdf.set_font("Malgun", style="", size=11)
         pdf.set_text_color(15, 23, 42)
@@ -140,7 +136,7 @@ def generate_pdf(model_name, specs_list, input_conditions, project_info):
         pdf.cell(160, 7, txt=f" {project_info['date']}", border=1, ln=True)
     pdf.ln(8)
     
-    # 4. 설계 조건 요약
+    # 4. 설계 입력 조건 요약 (구조 형태 추가 표시 🌟)
     if has_korean:
         pdf.set_font("Malgun", style="", size=13)
         pdf.set_text_color(15, 23, 42)
@@ -158,38 +154,38 @@ def generate_pdf(model_name, specs_list, input_conditions, project_info):
     
     pdf.cell(45, 8, txt=" Heating Load:", border=1)
     pdf.cell(50, 8, txt=f" {input_conditions['heat']:,} kcal/h", border=1)
-    pdf.cell(45, 8, txt=" Heating Source:", border=1)
-    pdf.cell(50, 8, txt=f" {input_conditions['heat_type']}", border=1, ln=True)
+    pdf.cell(45, 8, txt=" Unit Layout Type:", border=1)
+    pdf.cell(50, 8, txt=f" {input_conditions['ahu_type_label']}", border=1, ln=True)
     pdf.ln(10)
     
-    # 5. 선정 결과 상세 사양표
+    # 5. 선정 결과 상세 사양 명세 (표 높이를 7mm로 컴팩트하게 조정하여 단일 페이지 최적화 🌟)
     if has_korean:
         pdf.set_font("Malgun", style="", size=13)
-        pdf.cell(190, 8, txt=f"[2] 추천 모델 사양 명세: {model_name}", ln=True, align="L")
+        pdf.cell(190, 8, txt=f"[2] 추천 모델 상세 기술 규격 명세: {model_name}", ln=True, align="L")
         pdf.set_font("Malgun", style="", size=10)
     else:
         pdf.set_font("helvetica", style="B", size=12)
-        pdf.cell(190, 8, txt=f"[2] Specification: {model_name}", ln=True, align="L")
+        pdf.cell(190, 8, txt=f"[2] Technical Specification: {model_name}", ln=True, align="L")
         pdf.set_font("helvetica", style="B", size=10)
         
     pdf.set_fill_color(241, 245, 249)
-    pdf.cell(70, 8, txt=" Specification Item", border=1, fill=True)
-    pdf.cell(120, 8, txt=" Technical Data", border=1, fill=True, ln=True)
+    pdf.cell(75, 7, txt=" Specification Item", border=1, fill=True)
+    pdf.cell(115, 7, txt=" Technical Data", border=1, fill=True, ln=True)
     
     if has_korean:
-        pdf.set_font("Malgun", style="", size=10)
+        pdf.set_font("Malgun", style="", size=9.5)
     else:
-        pdf.set_font("helvetica", size=10)
+        pdf.set_font("helvetica", size=9.5)
         
     for spec, val in specs_list:
-        pdf.cell(70, 8, txt=f" {spec}", border=1)
-        pdf.cell(120, 8, txt=f" {val}", border=1, ln=True)
+        pdf.cell(75, 7, txt=f" {spec}", border=1)
+        pdf.cell(115, 7, txt=f" {val}", border=1, ln=True)
         
-    pdf.ln(12)
+    pdf.ln(10)
     if has_korean:
         pdf.set_font("Malgun", style="", size=9)
         pdf.set_text_color(148, 163, 184)
-        pdf.cell(190, 5, txt="* 본 성적서는 데이터베이스 기준 알고리즘에 의해 자동 생성된 기술 문서입니다.", ln=True, align="C")
+        pdf.cell(190, 5, txt="* 본 성적서는 데이터베이스 규격에 따라 시스템 알고리즘에 의해 자동 생성된 공식 기술 문서입니다.", ln=True, align="C")
     
     pdf_output = pdf.output()
     if isinstance(pdf_output, str):
@@ -199,7 +195,7 @@ def generate_pdf(model_name, specs_list, input_conditions, project_info):
 if df is None:
     st.error("❌ 데이터베이스(CSV) 파일을 찾을 수 없거나 열 사양이 올바르지 않습니다.")
 else:
-    # 타이틀 왼쪽에 회사 로고 배치
+    # 상단 로고 및 타이틀 정렬 바
     if os.path.exists("company_logo.png"):
         import base64
         with open("company_logo.png", "rb") as image_file:
@@ -229,6 +225,10 @@ else:
         st.write("---")
         st.subheader("2. 설계 조건 입력 (Input)")
         
+        # 🌟 [신규 추가]: H형과 HI형을 사용자가 직접 라디오 버튼으로 분기 선택할 수 있는 폼 추가
+        ahu_type = st.radio("공조기 레이아웃 구조 선택", ["H형 (단일팬 컴팩트형)", "HI형 (환기팬 내장 풀스펙형)"])
+        selected_type = "H" if "H형" in ahu_type else "HI"
+        
         cmh = st.number_input("필요 풍량 (CMH)", value=4500, step=100)
         cool_req = st.number_input("요구 냉방부하 (kcal/h)", value=35000, step=1000)
         heat_req = st.number_input("요구 난방부하 (kcal/h)", value=25000, step=1000)
@@ -256,6 +256,7 @@ else:
                 st.session_state['cool_val'] = cool_req
                 st.session_state['heat_val'] = heat_req
                 st.session_state['heat_type_val'] = heat_type
+                st.session_state['ahu_type_val'] = ahu_type
                 st.session_state['p_date'] = proj_date.strftime("%Y년 %m월 %d일")
                 st.session_state['p_name'] = proj_name if proj_name else "미지정 프로젝트"
                 st.session_state['p_author'] = proj_author if proj_author else "담당자"
@@ -264,17 +265,22 @@ else:
             curr_cool = st.session_state['cool_val']
             curr_heat = st.session_state['heat_val']
             curr_type = st.session_state['heat_type_val']
+            curr_ahu_type = st.session_state['ahu_type_val']
+            curr_selected_type = "H" if "H형" in curr_ahu_type else "HI"
             
             c_date = st.session_state['p_date']
             c_name = st.session_state['p_name']
             c_author = st.session_state['p_author']
             
-            candidates = df[(df['Range_CMH_Min'] <= curr_cmh) & (curr_cmh <= df['Range_CMH_Max'])]
+            # 🌟 [매칭 로직 수정]: 사용자가 선택한 H/HI구조 조건으로 1차 필터링 후 풍량/열부하 탐색
+            type_filtered_df = df[df['Type_H_HI'] == curr_selected_type]
+            
+            candidates = type_filtered_df[(type_filtered_df['Range_CMH_Min'] <= curr_cmh) & (curr_cmh <= type_filtered_df['Range_CMH_Max'])]
             if candidates.empty:
-                candidates = df[df['Range_CMH_Max'] >= curr_cmh]
+                candidates = type_filtered_df[type_filtered_df['Range_CMH_Max'] >= curr_cmh]
                 
             selected_row = None
-            status_msg = "✅ 설계 조건에 맞는 최적의 장비가 선정되었습니다."
+            status_msg = "✅ 설계 조건 및 장비 구조 형태에 부합하는 최적의 모델이 선정되었습니다."
             status_type = "success"
 
             for _, row in candidates.iterrows():
@@ -283,11 +289,11 @@ else:
                     break
 
             if selected_row is None:
-                all_larger = df[df['Range_CMH_Max'] >= curr_cmh]
+                all_larger = type_filtered_df[type_filtered_df['Range_CMH_Max'] >= curr_cmh]
                 for _, row in all_larger.iterrows():
                     if row['Cooling_kcal_h'] >= curr_cool and row[heat_col] >= curr_heat:
                         selected_row = row
-                        status_msg = "⚠️ 알림: 풍량 대비 부하가 커서 용량을 만족하는 한 단계 상위 모델이 선정되었습니다."
+                        status_msg = "⚠️ 알림: 풍량 대비 요구 부하가 커서 용량을 충족하는 한 단계 상위 모델이 안전 선정되었습니다."
                         status_type = "warning"
                         break
 
@@ -303,24 +309,37 @@ else:
                 with col_m1:
                     st.metric(label="✨ 추천 모델명", value=selected_row['Model_Name'])
                 
+                # 🌟 [사양 데이터 세트 전면 확장]: 새로 추가된 외형 치수 및 접속관 크기 배열 매칭 완료
                 specs_list = [
                     ("표준 정격 풍량", f"{int(selected_row['STD_CMH']):,} CMH ({int(selected_row['Std_CMM'])} CMM)"),
                     ("적정 풍량 범위", f"{int(selected_row['Range_CMH_Min']):,} ~ {int(selected_row['Range_CMH_Max']):,} CMH"),
                     ("정격 냉방능력", f"{int(selected_row['Cooling_kcal_h']):,} kcal/h"),
                     (f"정격 난방능력 ({heat_label})", f"{int(selected_row[heat_col]):,} kcal/h"),
-                    ("공급팬 (SF) 사이즈", selected_row['SF_Fan_Size']),
+                    ("장비 외형 규격 크기 (W × H × L)", f"{int(selected_row['Size_W']):,} × {int(selected_row['Size_H']):,} × {int(selected_row['Size_L']):,} mm"),
+                    ("급기 접속관 (SA) 사이즈", f"{selected_row['Conn_SA']} mm"),
+                    ("외기 접속관 (OA) 사이즈", f"{selected_row['Conn_OA']} mm"),
+                    ("배기 접속관 (EA) 사이즈", f"{selected_row['Conn_EA']} mm" if selected_row['Type_H_HI'] == 'HI' else "- (컴팩트형 제외)"),
+                    ("환기 접속관 (RA) 사이즈", f"{selected_row['Conn_RA']} mm"),
+                    ("공급팬 (SF) 규격 사이즈", selected_row['SF_Fan_Size']),
                     ("공급팬 모터 동력", f"{selected_row['SF_Motor_kW']} kW (정압 {int(selected_row['SF_Static_mmAq'])} mmAg)"),
-                    ("환기팬 (RF) 사이즈", selected_row['RF_Fan_Size']),
-                    ("환기팬 모터 동력", f"{selected_row['RF_Motor_kW']} kW (정압 {int(selected_row['RF_Static_mmAq'])} mmAg)"),
+                    ("환기팬 (RF) 규격 사이즈", selected_row['RF_Fan_Size'] if selected_row['Type_H_HI'] == 'HI' else "- (컴팩트형 제외)"),
+                    ("환기팬 모터 동력", f"{selected_row['RF_Motor_kW']} kW (정압 {int(selected_row['RF_Static_mmAq'])} mmAg)" if selected_row['Type_H_HI'] == 'HI' else "- (컴팩트형 제외)"),
                     ("코일 패스 및 수량", f"{int(selected_row['Coil_Pass'])} Pass / {int(selected_row['Coil_Qty'])} 개"),
-                    ("코일 크기 (H x W)", f"{int(selected_row['Coil_H'])} mm x {int(selected_row['Coil_W'])} mm"),
+                    ("코일 규격 크기 (H × W)", f"{int(selected_row['Coil_H'])} mm × {int(selected_row['Coil_W'])} mm"),
                     ("정면 면적 (Face Area)", f"{selected_row['Face_Area_m2']} m²"),
-                    ("필터 배열", f"{selected_row['Filter_Row']} 단 x {selected_row['Filter_Col']} 열"),
-                    ("표준 가습량", f"{int(selected_row['Humid_kg_h'])} Kg/h"),
-                    ("냉온수 관경", f"{int(selected_row['Conn_Cool_In_Out_A'])} A x {int(selected_row['Conn_Cool_Qty'])} 개")
+                    ("필터 배열 구조", f"{selected_row['Filter_Row']} 단 × {selected_row['Filter_Col']} 열"),
+                    ("표준 정격 가습량", f"{int(selected_row['Humid_kg_h'])} Kg/h"),
+                    ("냉온수 배관 관경", f"{int(selected_row['Conn_Cool_In_Out_A'])} A × {int(selected_row['Conn_Cool_Qty'])} 개")
                 ]
 
-                input_conditions = {'cmh': curr_cmh, 'cool': curr_cool, 'heat': curr_heat, 'heat_type': curr_type}
+                # PDF 구울 때 구조 레이아웃 한글 라벨 묶음 전달
+                input_conditions = {
+                    'cmh': curr_cmh, 
+                    'cool': curr_cool, 
+                    'heat': curr_heat, 
+                    'heat_type': curr_type,
+                    'ahu_type_label': curr_ahu_type
+                }
                 project_info = {'date': c_date, 'project_name': c_name, 'author': c_author}
                 pdf_bytes = generate_pdf(selected_row['Model_Name'], specs_list, input_conditions, project_info)
                 
@@ -334,12 +353,12 @@ else:
                     )
 
                 res_data = {
-                    "사양 구분": [s[0] for s in specs_list],
-                    "상세 데이터": [s[1] for s in specs_list]
+                    "사양 구분 항목": [s[0] for s in specs_list],
+                    "상세 기술 데이터": [s[1] for s in specs_list]
                 }
                 res_df = pd.DataFrame(res_data)
                 st.dataframe(res_df, use_container_width=True, hide_index=True)
             else:
-                st.error("❌ 에러: 요구하는 열부하 용량이 너무 커서 데이터베이스 내에 매칭 가능한 모델이 없습니다.")
+                st.error("❌ 에러: 요구하는 설계 사양이 너무 커서 데이터베이스 내에 매칭 가능한 루트에어 모델이 없습니다.")
         else:
-            st.info("💡 좌측 입력창에 정보를 입력한 후 [최적 장비 선정하기] 버튼을 누르세요.")
+            st.info("💡 좌측 입력창에 프로젝트 명칭 및 설계 조건을 입력한 후 [최적 장비 선정하기] 버튼을 누르세요.")
