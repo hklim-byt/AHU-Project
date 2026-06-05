@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 from fpdf import FPDF
 from datetime import datetime
+import base64
 
 # 웹페이지 기본 설정
 st.set_page_config(
@@ -12,26 +13,36 @@ st.set_page_config(
     layout="wide"
 )
 
-# 스타일 커스텀 (CSS)
+# 스타일 커스텀 (CSS) - 상단 헤더 바 레이아웃 정밀 튜닝
 st.markdown("""
     <style>
-    .main .block-container { padding-top: 2rem; }
-    .title-container {
+    .main .block-container { padding-top: 1.5rem; }
+    
+    /* 🌟 메인 화면 상단 더블 로고 & 타이틀 통합 헤더 바 스타일 */
+    .main-header-container {
         display: flex;
         align-items: center;
-        gap: 15px;
+        justify-content: space-between;
+        background-color: #FFFFFF;
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         margin-bottom: 5px;
     }
-    .title-container img {
-        height: 45px;
+    .header-left-logo, .header-right-logo {
+        height: 50px; /* 🌟 양쪽 로고 크기 동일하게 맞춤 */
         object-fit: contain;
     }
-    .title-container h1 {
+    .main-header-container h1 {
         margin: 0;
         color: #1E293B;
         font-family: 'Malgun Gothic', sans-serif;
-        font-size: 2.2rem;
+        font-size: 2.3rem;
+        font-weight: bold;
+        text-align: center;
+        flex-grow: 1;
     }
+    
     .stButton>button { width: 100%; font-weight: bold; background-color: #38BDF8 !important; color: #0F172A !important; border: none !important; }
     .stButton>button:hover { background-color: #0EA5E9 !important; }
     .stDownloadButton>button { width: 100%; font-weight: bold; background-color: #10B981 !important; color: #FFFFFF !important; border: none !important; }
@@ -39,7 +50,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 🌟 [캐시 로직 개선]: 파일의 수정 시간(mtime)을 감지하여 엑셀이 바뀌면 캐시를 자동 무효화합니다.
+# 데이터베이스 로드 함수
 @st.cache_data
 def load_data(filepath, file_mtime):
     if not os.path.exists(filepath):
@@ -55,7 +66,6 @@ def load_data(filepath, file_mtime):
             continue
     return None
 
-# 대상 데이터베이스 파일 찾기 및 시간 측정
 db_filename = 'AHU_Selection_Master_DB.csv'
 if not os.path.exists(db_filename):
     current_dir = os.getcwd()
@@ -68,15 +78,40 @@ if os.path.exists(db_filename):
 else:
     df = None
 
-# 🌟 [안전 가드 신설]: 구버전 데이터가 캐싱되어 있거나 열이 누락되었을 때 친절한 에러 안내
 if df is None:
     st.error("❌ 데이터베이스(CSV) 파일을 찾을 수 없습니다. 'AHU_Selection_Master_DB.csv' 파일이 저장소에 있는지 확인해 주세요.")
 elif 'Type_H_HI' not in df.columns:
-    st.error("❌ [알림] 인터넷 서버가 아직 구버전 CSV 파일의 기억을 붙잡고 있습니다. 최신 CSV 파일이 깃허브에 정상 업로드 완료되었다면, 스트림릿 창 우측 하단의 [Manage app] ➡️ 새로 뜨는 창의 세로 점 3개 ➡️ [Clear cache] 버튼을 눌러 기억을 초기화해 주세요!")
+    st.error("❌ [알림] 인터넷 서버가 아직 구버전 CSV 파일의 기억을 붙잡고 있습니다. [Clear cache]를 진행해 주세요.")
 else:
-    # --- 이하 정상 메인 로직 가동 ---
+    # --- 상단 메인 헤더 바 랜더링 (로고 크기 일치 및 이름 추가) ---
+    left_logo_html = ""
+    right_logo_html = ""
+    
+    # 1. 왼쪽 company_logo 인코딩
+    if os.path.exists("company_logo.png"):
+        with open("company_logo.png", "rb") as f:
+            left_logo_bytes = base64.b64encode(f.read()).decode()
+            left_logo_html = f'<img class="header-left-logo" src="data:image/png;base64,{left_logo_bytes}" alt="Company Logo">'
+    
+    # 2. 오른쪽 ahri_logo 인코딩
+    if os.path.exists("ahri_logo.png"):
+        with open("ahri_logo.png", "rb") as f:
+            right_logo_bytes = base64.b64encode(f.read()).decode()
+            right_logo_html = f'<img class="header-right-logo" src="data:image/png;base64,{right_logo_bytes}" alt="AHRI Logo">'
+            
+    # 3. HTML 헤더 바 결합 출력
+    st.markdown(f"""
+        <div class="main-header-container">
+            {left_logo_html}
+            <h1>루트에어 AHU Selection Program</h1>
+            {right_logo_html}
+        </div>
+        """, unsafe_allow_html=True)
+        
+    st.caption(f"📊 Connected Database: {os.path.basename(db_filename)}")
+    st.write("---")
 
-    # 하단 고정 저작권/연락처 푸터
+    # PDF 푸터 설정 클래스
     class RootAirPDF(FPDF):
         def footer(self):
             self.set_y(-15)
@@ -95,7 +130,6 @@ else:
         
         font_name = "malgun.ttf"
         font_path = os.path.join(os.getcwd(), font_name)
-        
         if not os.path.exists(font_path):
             font_path = "C:\\Windows\\Fonts\\malgun.ttf"
             
@@ -135,8 +169,6 @@ else:
         if has_korean:
             pdf.set_font("Malgun", style="", size=11)
             pdf.set_text_color(15, 23, 42)
-            
-            pdf.set_fill_color(248, 250, 252)
             pdf.cell(30, 7, txt=" 프로젝트명", border=1, fill=True)
             pdf.cell(75, 7, txt=f" {project_info['project_name']}", border=1)
             pdf.cell(25, 7, txt=" 작성자", border=1, fill=True)
@@ -200,8 +232,7 @@ else:
             return pdf_output.encode('latin1')
         return bytes(pdf_output)
 
-    # 화면 레이아웃 시작
-    # 분할
+    # 화면 레이아웃 (좌측 입력 : 우측 결과)
     col_input, col_result = st.columns([1, 2], gap="large")
 
     with col_input:
@@ -214,7 +245,7 @@ else:
         st.subheader("2. 설계 조건 입력 (Input)")
         
         ahu_type = st.radio("공조기 레이아웃 구조 선택", ["H형 (단일팬 컴팩트형)", "HI형 (환기팬 내장 풀스펙형)"])
-        selected_type = "H" if "H형" in ahu_type else "HI"
+        curr_selected_type = "H" if "H형" in ahu_type else "HI"
         
         cmh = st.number_input("필요 풍량 (CMH)", value=4500, step=100)
         cool_req = st.number_input("요구 냉방부하 (kcal/h)", value=35000, step=1000)
@@ -226,11 +257,6 @@ else:
 
         st.write("")
         submit_btn = st.button("🔍 최적 장비 선정하기")
-        
-        # [AHRI 마크 배치]
-        st.write("---")
-        if os.path.exists("ahri_logo.png"):
-            st.image("ahri_logo.png", caption="AHRI Certified Performance", width=140)
 
     with col_result:
         st.subheader("3. 최적 모델 선정 결과 (Output)")
