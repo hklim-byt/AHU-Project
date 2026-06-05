@@ -13,12 +13,10 @@ st.set_page_config(
     layout="wide"
 )
 
-# 스타일 커스텀 (CSS) - 상단 헤더 바 레이아웃 정밀 튜닝
+# 스타일 커스텀 (CSS)
 st.markdown("""
     <style>
     .main .block-container { padding-top: 1.5rem; }
-    
-    /* 🌟 메인 화면 상단 더블 로고 & 타이틀 통합 헤더 바 스타일 */
     .main-header-container {
         display: flex;
         align-items: center;
@@ -30,7 +28,7 @@ st.markdown("""
         margin-bottom: 5px;
     }
     .header-left-logo, .header-right-logo {
-        height: 50px; /* 🌟 양쪽 로고 크기 동일하게 맞춤 */
+        height: 50px;
         object-fit: contain;
     }
     .main-header-container h1 {
@@ -42,7 +40,6 @@ st.markdown("""
         text-align: center;
         flex-grow: 1;
     }
-    
     .stButton>button { width: 100%; font-weight: bold; background-color: #38BDF8 !important; color: #0F172A !important; border: none !important; }
     .stButton>button:hover { background-color: #0EA5E9 !important; }
     .stDownloadButton>button { width: 100%; font-weight: bold; background-color: #10B981 !important; color: #FFFFFF !important; border: none !important; }
@@ -83,23 +80,18 @@ if df is None:
 elif 'Type_H_HI' not in df.columns:
     st.error("❌ [알림] 인터넷 서버가 아직 구버전 CSV 파일의 기억을 붙잡고 있습니다. [Clear cache]를 진행해 주세요.")
 else:
-    # --- 상단 메인 헤더 바 랜더링 (로고 크기 일치 및 이름 추가) ---
+    # 상단 메인 헤더 바 랜더링
     left_logo_html = ""
     right_logo_html = ""
-    
-    # 1. 왼쪽 company_logo 인코딩
     if os.path.exists("company_logo.png"):
         with open("company_logo.png", "rb") as f:
             left_logo_bytes = base64.b64encode(f.read()).decode()
             left_logo_html = f'<img class="header-left-logo" src="data:image/png;base64,{left_logo_bytes}" alt="Company Logo">'
-    
-    # 2. 오른쪽 ahri_logo 인코딩
     if os.path.exists("ahri_logo.png"):
         with open("ahri_logo.png", "rb") as f:
             right_logo_bytes = base64.b64encode(f.read()).decode()
             right_logo_html = f'<img class="header-right-logo" src="data:image/png;base64,{right_logo_bytes}" alt="AHRI Logo">'
             
-    # 3. HTML 헤더 바 결합 출력
     st.markdown(f"""
         <div class="main-header-container">
             {left_logo_html}
@@ -166,16 +158,20 @@ else:
             pdf.cell(190, 12, txt="RootAir Inc. - AHU Technical Report", ln=True, align="C")
         pdf.ln(10)
         
+        # 🌟 [버그 수정 완료]: 그레이 톤 채우기를 안전하게 제거하고 깔끔한 선(Border) 위주로 테이블 구조 수정
         if has_korean:
-            pdf.set_font("Malgun", style="", size=11)
-            pdf.set_text_color(15, 23, 42)
-            pdf.cell(30, 7, txt=" 프로젝트명", border=1, fill=True)
-            pdf.cell(75, 7, txt=f" {project_info['project_name']}", border=1)
-            pdf.cell(25, 7, txt=" 작성자", border=1, fill=True)
-            pdf.cell(60, 7, txt=f" {project_info['author']}", border=1, ln=True)
+            pdf.set_font("Malgun", style="", size=10.5)
+            pdf.set_text_color(51, 65, 85) # 진한 회색 본문 글씨
             
-            pdf.cell(30, 7, txt=" 선정 일자", border=1, fill=True)
-            pdf.cell(160, 7, txt=f" {project_info['date']}", border=1, ln=True)
+            # 첫 번째 행: 프로젝트명 & 작성자
+            pdf.cell(30, 8, txt=" 프로젝트명", border=1, fill=False)
+            pdf.cell(75, 8, txt=f" {project_info['project_name']}", border=1, fill=False)
+            pdf.cell(25, 8, txt=" 작성자", border=1, fill=False)
+            pdf.cell(60, 8, txt=f" {project_info['author']}", border=1, ln=True, fill=False)
+            
+            # 두 번째 행: 선정 일자
+            pdf.cell(30, 8, txt=" 선정 일자", border=1, fill=False)
+            pdf.cell(160, 8, txt=f" {project_info['date']}", border=1, ln=True, fill=False)
         pdf.ln(8)
         
         if has_korean:
@@ -208,6 +204,7 @@ else:
             pdf.cell(190, 8, txt=f"[2] Technical Specification: {model_name}", ln=True, align="L")
             pdf.set_font("helvetica", style="B", size=10)
             
+        # 하단 대형 기술규격 명세표 헤더 부분도 명시적으로 fill=True에 대응하는 색깔 처리 완료
         pdf.set_fill_color(241, 245, 249)
         pdf.cell(75, 7, txt=" Specification Item", border=1, fill=True)
         pdf.cell(115, 7, txt=" Technical Data", border=1, fill=True, ln=True)
@@ -218,8 +215,8 @@ else:
             pdf.set_font("helvetica", size=9.5)
             
         for spec, val in specs_list:
-            pdf.cell(75, 7, txt=f" {spec}", border=1)
-            pdf.cell(115, 7, txt=f" {val}", border=1, ln=True)
+            pdf.cell(75, 7, txt=f" {spec}", border=1, fill=False)
+            pdf.cell(115, 7, txt=f" {val}", border=1, ln=True, fill=False)
             
         pdf.ln(10)
         if has_korean:
@@ -232,7 +229,7 @@ else:
             return pdf_output.encode('latin1')
         return bytes(pdf_output)
 
-    # 화면 레이아웃 (좌측 입력 : 우측 결과)
+    # 화면 레이아웃
     col_input, col_result = st.columns([1, 2], gap="large")
 
     with col_input:
