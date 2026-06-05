@@ -76,18 +76,11 @@ if os.path.exists(db_filename):
 else:
     df = None
 
-# 🌟 [김강산 기술대표님 구현 공식]: 습공기 상태방정식 기반 실시간 공기 밀도 연산 함수
+# 김강산 기술대표님 구현 공식: 습공기 상태방정식 기반 실시간 공기 밀도 연산 함수
 def calculate_air_density(db_temp, rh):
-    """
-    db_temp: 건구온도 (°C)
-    rh: 상대습도 (%)
-    반환값: 공기 밀도 (kg/m³)
-    """
-    abs_temp = db_temp + 273.15 # 절대온도 변환 (K)
-    std_pressure = 101325 # 표준 대기압 (Pa)
+    abs_temp = db_temp + 273.15 
+    std_pressure = 101325 
     
-    # 1. ASHRAE / 김강산 대표님 공식 기반 포화수증기압(Ps) 계산 (Pa 단위)
-    # 온도 구간별 정밀 공식 간소화 적용
     if db_temp >= 0:
         c1 = -5.8002206e03
         c2 = 1.3914993e00
@@ -98,18 +91,13 @@ def calculate_air_density(db_temp, rh):
         ln_ps = c1/abs_temp + c2 + c3*abs_temp + c4*(abs_temp**2) + c5*(abs_temp**3) + c6*math.log(abs_temp)
         ps = math.exp(ln_ps)
     else:
-        # 0도 이하 빙결 구간 공식 백업
         ps = 611.2 * math.exp((17.62 * db_temp) / (db_temp + 243.12))
         
-    # 2. 수증기 분압 (Pw) 산출
     pw = ps * (rh / 100.0)
-    
-    # 3. 건공기 분압 (Pa) 산출
     p_da = std_pressure - pw
     
-    # 4. 기체상수를 활용한 습공기 밀도(rho) 최종 융합 연산
-    r_da = 287.055 # 건공기 기체상수 J/(kg·K)
-    r_wv = 461.5 # 수증기 기체상수 J/(kg·K)
+    r_da = 287.055 
+    r_wv = 461.5 
     
     density = (p_da / (r_da * abs_temp)) + (pw / (r_wv * abs_temp))
     return round(density, 4)
@@ -196,7 +184,6 @@ else:
             pdf.cell(190, 12, txt="RootAir Inc. - AHU Technical Report", ln=True, align="C")
         pdf.ln(10)
         
-        # 프로젝트 메타 정보 테이블
         if has_korean:
             pdf.set_font("Malgun", style="", size=10.5)
             pdf.set_text_color(51, 65, 85)
@@ -208,7 +195,6 @@ else:
             pdf.cell(160, 8, txt=f" {project_info['date']}", border=1, ln=True)
         pdf.ln(6)
         
-        # 🌟 [PDF 레이아웃 확장]: 설계 입력 조건에 김강산 기술대표님 공기밀도 계산서 스펙 포함
         if has_korean:
             pdf.set_font("Malgun", style="", size=12)
             pdf.set_text_color(15, 23, 42)
@@ -240,7 +226,6 @@ else:
         pdf.cell(50, 7, txt=f" {density_info['density']} kg/m3", border=1, ln=True)
         pdf.ln(8)
         
-        # 상세 기술 규격 명세표
         if has_korean:
             pdf.set_font("Malgun", style="", size=12)
             pdf.cell(190, 8, txt=f"[2] 추천 모델 상세 기술 규격 명세: {model_name}", ln=True, align="L")
@@ -267,14 +252,14 @@ else:
         if has_korean:
             pdf.set_font("Malgun", style="", size=8.5)
             pdf.set_text_color(148, 163, 184)
-            pdf.cell(190, 5, txt="* 본 성적서는 김강산 기술대표 감수 습공기 선도 수식에 의해 공기밀도 보정이 완료된 엔지니어링 문서입니다.", ln=True, align="C")
+            pdf.cell(190, 5, txt="* 本 성적서는 김강산 기술대표 감수 습공기 선도 수식에 의해 공기밀도 보정이 완료된 엔지니어링 문서입니다.", ln=True, align="C")
         
         pdf_output = pdf.output()
         if isinstance(pdf_output, str):
             return pdf_output.encode('latin1')
         return bytes(pdf_output)
 
-    # 화면 레이아웃 분할
+    # 화면 레이아웃
     col_input, col_result = st.columns([1, 2], gap="large")
 
     with col_input:
@@ -288,12 +273,10 @@ else:
         ahu_type = st.radio("공조기 레이아웃 구조 선택", ["H형 (단일팬 컴팩트형)", "HI형 (환기팬 내장 풀스펙형)"])
         cmh = st.number_input("필요 풍량 (CMH)", value=4500, step=100)
         
-        # 🌟 [시나리오 B 핵심]: 김강산 기술대표님 공기밀도 연산용 온/습도 입력 패널 구축
         with st.expander("🌡️ 김강산 대표님 실시간 공기밀도 보정 설정", expanded=True):
             design_temp = st.number_input("현장 설계 건구온도 (°C)", value=20.0, step=1.0, min_value=-20.0, max_value=50.0)
             design_rh = st.slider("현장 설계 상대습도 (%)", value=50, min_value=0, max_value=100, step=5)
             
-            # 실시간 공기밀도 화면 계산 출력
             calculated_rho = calculate_air_density(design_temp, design_rh)
             st.metric(label="📊 연산된 현장 습공기 밀도", value=f"{calculated_rho} kg/m³", delta=f"{round(calculated_rho - 1.2041, 4)} vs 표준")
             st.caption("※ 표준 공기 밀도 기준: 1.2041 kg/m³ (20°C, 50%)")
@@ -323,35 +306,32 @@ else:
                 st.session_state['p_date'] = proj_date.strftime("%Y년 %m월 %d일")
                 st.session_state['p_name'] = proj_name if proj_name else "미지정 프로젝트"
                 st.session_state['p_author'] = proj_author if proj_author else "담당자"
-                # 밀도 보정치 세션 박제 🌟
                 st.session_state['d_temp'] = design_temp
                 st.session_state['d_rh'] = design_rh
                 st.session_state['d_rho'] = calculated_rho
             
-            curr_cmh = st.session_state['cmh_val']
-            curr_cool = st.session_state['cool_val']
-            curr_heat = st.session_state['heat_val']
-            curr_type = st.session_state['heat_type_val']
-            curr_ahu_type = st.session_state['ahu_type_val']
+            # 🌟 [버그 수정 완료]: 세션 상태 이관 도중 발생할 수 있는 KeyError를 .get(key, default)로 차단!
+            curr_cmh = st.session_state.get('cmh_val', cmh)
+            curr_cool = st.session_state.get('cool_val', cool_req)
+            curr_heat = st.session_state.get('heat_val', heat_req)
+            curr_type = st.session_state.get('heat_type_val', heat_type)
+            curr_ahu_type = st.session_state.get('ahu_type_val', ahu_type)
             curr_selected_type = "H" if "H형" in curr_ahu_type else "HI"
             
-            c_date = st.session_state['p_date']
-            c_name = st.session_state['p_name']
-            c_author = st.session_state['p_author']
+            c_date = st.session_state.get('p_date', proj_date.strftime("%Y년 %m월 %d일"))
+            c_name = st.session_state.get('p_name', proj_name if proj_name else "미지정 프로젝트")
+            c_author = st.session_state.get('p_author', proj_author if proj_author else "담당자")
             
-            c_temp = st.session_state['d_temp']
-            c_rh = st.session_state['d_rh']
-            c_rho = st.session_state['d_rho']
+            c_temp = st.session_state.get('d_temp', design_temp)
+            c_rh = st.session_state.get('d_rh', design_rh)
+            c_rho = st.session_state.get('d_rho', calculated_rho)
             
-            # 🌟 [시나리오 B 핵심 질량보정 산식]: 표준밀도(1.2041) 대비 현장밀도 비율로 요구 부하 가중치 연산
-            # 현장 공기가 희박해지면(밀도 감소), 동일 풍량당 질량이 줄어드므로 장비 용량이 더 커야 함을 반영
             density_ratio = 1.2041 / c_rho
             corr_cool_req = curr_cool * density_ratio
             corr_heat_req = curr_heat * density_ratio
             
             type_filtered_df = df[df['Type_H_HI'] == curr_selected_type]
             
-            # 보정된 열부하(corr_cool_req, corr_heat_req)를 기반으로 DB 매칭 탐색 진행 🌟
             candidates = type_filtered_df[(type_filtered_df['Range_CMH_Min'] <= curr_cmh) & (curr_cmh <= type_filtered_df['Range_CMH_Max'])]
             if candidates.empty:
                 candidates = type_filtered_df[type_filtered_df['Range_CMH_Max'] >= curr_cmh]
@@ -380,7 +360,6 @@ else:
                 else:
                     st.warning(status_msg)
 
-                # 프로젝트 메타 및 밀도 결과 서머리 카드 출력
                 st.info(f"📋 **Project:** {c_name} | 👤 **Author:** {c_author} | 📅 **Date:** {c_date}")
                 st.warning(f"🌡️ **현장 공기밀도:** {c_rho} kg/m³ (보정 계수: {round(density_ratio, 3)}) | ❄️ **보정 냉방부하:** {int(corr_cool_req):,} kcal/h | 🔥 **보정 난방부하:** {int(corr_heat_req):,} kcal/h")
 
@@ -440,4 +419,4 @@ else:
             else:
                 st.error("❌ 에러: 공기 밀도 보정 결과, 요구 부하를 감당할 수 있는 대형 모델이 데이터베이스에 없습니다.")
         else:
-            st.info("💡 좌측 입력창에 설계 조건 및 현장 온습도를 입력한 후 [최적 장비 선정하기] 버튼을 누르세요.")
+            st.info("💡 좌측 입력창에 정보를 입력한 후 [최적 장비 선정하기] 버튼을 누르세요.")
