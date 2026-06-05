@@ -10,7 +10,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 스타일 커스텀 (CSS) - 깔끔한 엔지니어링 블루 톤
+# 스타일 커스텀 (CSS)
 st.markdown("""
     <style>
     .main .block-container { padding-top: 2rem; }
@@ -20,7 +20,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 데이터베이스 로드 함수
+# 데이터베이스 로드 함수 (한글 인코딩 및 열 이름 공백 공포증 해결)
 @st.cache_data
 def load_data():
     db_filename = 'AHU_Selection_Master_DB.csv'
@@ -31,21 +31,26 @@ def load_data():
             db_filename = files[0]
         else:
             return None
-    try:
-        return pd.read_csv(db_filename, encoding='utf-8')
-    except Exception:
+            
+    # 인코딩 문제로 인한 열 이름 깨짐 방지 처리
+    for enc in ['utf-8', 'cp949', 'utf-8-sig']:
         try:
-            return pd.read_csv(db_filename, encoding='cp949')
+            df = pd.read_csv(db_filename, encoding=enc)
+            # 열 이름 앞뒤에 혹시 있을지 모르는 공백 제거
+            df.columns = df.columns.str.strip()
+            if 'Range_CMH_Min' in df.columns:
+                return df
         except Exception:
-            return None
+            continue
+    return None
 
 df = load_data()
 
 if df is None:
-    st.error("❌ 데이터베이스(CSV) 파일을 찾을 수 없습니다.")
+    st.error("❌ 데이터베이스(CSV) 파일을 찾을 수 없거나 열 사양이 올바르지 않습니다. 'AHU_Selection_Master_DB.csv' 파일의 헤더를 확인해 주세요.")
 else:
     # 메인 타이틀 영역
-    st.title("⚙️ AHU 자동 선정 시스템 Web v1.2")
+    st.title("⚙️ AHU 자동 선정 시스템 Web v1.3")
     st.caption(f"📊 연결된 데이터베이스: {os.path.basename('AHU_Selection_Master_DB.csv')}")
     st.write("---")
 
@@ -66,10 +71,12 @@ else:
         st.write("")
         submit_btn = st.button("🔍 최적 장비 선정하기")
         
-        # 🌟 [AHRI 마크 배치] - 실제 깃허브 주소인 root-air-selection 으로 경로를 수정했습니다!
+        # 🌟 [AHRI 마크 로컬 로딩 방식으로 변경]
         st.write("---")
-        ahri_logo_url = "https://raw.githubusercontent.com/hklim-byt/root-air-selection/main/ahri_logo.png"
-        st.image(ahri_logo_url, caption="AHRI Certified Performance", width=140, output_format="PNG")
+        if os.path.exists("ahri_logo.png"):
+            st.image("ahri_logo.png", caption="AHRI Certified Performance", width=140)
+        else:
+            st.warning("⚠️ ahri_logo.png 파일이 폴더에 없습니다.")
 
     with col_result:
         # 🌟 [결과창 타이틀 & 회사 로고 가로 배열]
@@ -77,9 +84,11 @@ else:
         with col_res_title:
             st.subheader("2. 최적 모델 선정 결과 (Output)")
         with col_logo:
-            # 🌟 [회사 로고 배치] - 실제 깃허브 주소인 root-air-selection 으로 경로를 수정했습니다!
-            company_logo_url = "https://raw.githubusercontent.com/hklim-byt/root-air-selection/main/company_logo.png"
-            st.image(company_logo_url, width=180, output_format="PNG")
+            # 🌟 [회사 로고 로컬 로딩 방식으로 변경]
+            if os.path.exists("company_logo.png"):
+                st.image("company_logo.png", width=180)
+            else:
+                st.warning("⚠️ company_logo.png 파일이 폴더에 없습니다.")
             
         st.write("")
 
