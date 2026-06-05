@@ -33,7 +33,7 @@ st.markdown("""
     }
     .stButton>button { width: 100%; font-weight: bold; background-color: #38BDF8 !important; color: #0F172A !important; border: none !important; }
     .stButton>button:hover { background-color: #0EA5E9 !important; }
-    /* PDF 다운로드 버튼 스타일 (시인성 좋은 녹색 배치) */
+    /* PDF 다운로드 버튼 스타일 */
     .stDownloadButton>button { width: 100%; font-weight: bold; background-color: #10B981 !important; color: #FFFFFF !important; border: none !important; }
     .stDownloadButton>button:hover { background-color: #059669 !important; }
     </style>
@@ -63,7 +63,7 @@ def load_data():
 
 df = load_data()
 
-# 🌟 [PDF 생성 함수]: 스트림릿 다운로드 전용 바이너리 변환 문법 적용
+# 🌟 [PDF 생성 함수]: style="B" 에러 요소를 완벽히 제거하고 폰트 사이즈로 레이아웃 최적화
 def generate_pdf(model_name, specs_list, input_conditions):
     pdf = FPDF()
     pdf.add_page()
@@ -77,7 +77,9 @@ def generate_pdf(model_name, specs_list, input_conditions):
     has_korean = False
     try:
         if os.path.exists(font_path):
+            # 에러 방지를 위해 일반(클리어) 스타일과 굵은(B) 스타일 호출 시 모두 하나의 폰트 파일을 바라보도록 안전 장치 이중화
             pdf.add_font("Malgun", "", font_path)
+            pdf.add_font("Malgun", "B", font_path)
             pdf.set_font("Malgun", size=11)
             has_korean = True
         else:
@@ -85,13 +87,13 @@ def generate_pdf(model_name, specs_list, input_conditions):
     except:
         pdf.set_font("helvetica", size=11)
 
-    # 1. 문서 헤더
+    # 1. 문서 헤더 (style="B"를 공백""으로 수정하여 크래시 차단 ✨)
     if has_korean:
-        pdf.set_font("Malgun", style="B", size=20)
+        pdf.set_font("Malgun", style="", size=22) # 사이즈를 키워 제목 강조
         pdf.set_text_color(30, 41, 59)
         pdf.cell(190, 15, txt="루트에어 AHU 장비 선정 성적서", ln=True, align="C")
         
-        pdf.set_font("Malgun", size=9)
+        pdf.set_font("Malgun", style="", size=9)
         pdf.set_text_color(100, 116, 139)
         pdf.cell(190, 5, txt="ROOT AIR CO., LTD. | Technical Selection Report", ln=True, align="C")
     else:
@@ -102,10 +104,10 @@ def generate_pdf(model_name, specs_list, input_conditions):
     
     # 2. 설계 조건 요약
     if has_korean:
-        pdf.set_font("Malgun", style="B", size=12)
+        pdf.set_font("Malgun", style="", size=13) # 크기 향상으로 섹션 구분
         pdf.set_text_color(15, 23, 42)
         pdf.cell(190, 8, txt="[1] 설계 입력 조건 (Design Input)", ln=True, align="L")
-        pdf.set_font("Malgun", size=10)
+        pdf.set_font("Malgun", style="", size=10)
     else:
         pdf.set_font("helvetica", style="B", size=12)
         pdf.cell(190, 8, txt="[1] Design Input Conditions", ln=True, align="L")
@@ -124,9 +126,9 @@ def generate_pdf(model_name, specs_list, input_conditions):
     
     # 3. 선정 결과 상세 사양표
     if has_korean:
-        pdf.set_font("Malgun", style="B", size=12)
+        pdf.set_font("Malgun", style="", size=13)
         pdf.cell(190, 8, txt=f"[2] 추천 모델 사양 명세: {model_name}", ln=True, align="L")
-        pdf.set_font("Malgun", style="B", size=10)
+        pdf.set_font("Malgun", style="", size=10)
     else:
         pdf.set_font("helvetica", style="B", size=12)
         pdf.cell(190, 8, txt=f"[2] Specification: {model_name}", ln=True, align="L")
@@ -137,7 +139,7 @@ def generate_pdf(model_name, specs_list, input_conditions):
     pdf.cell(120, 8, txt=" Technical Data", border=1, fill=True, ln=True)
     
     if has_korean:
-        pdf.set_font("Malgun", size=10)
+        pdf.set_font("Malgun", style="", size=10)
     else:
         pdf.set_font("helvetica", size=10)
         
@@ -147,11 +149,10 @@ def generate_pdf(model_name, specs_list, input_conditions):
         
     pdf.ln(15)
     if has_korean:
-        pdf.set_font("Malgun", size=9)
+        pdf.set_font("Malgun", style="", size=9)
         pdf.set_text_color(148, 163, 184)
         pdf.cell(190, 5, txt="* 본 성적서는 데이터베이스 기준 알고리즘에 의해 자동 생성된 기술 문서입니다.", ln=True, align="C")
     
-    # 🌟 [핵심 수정]: 스트림릿의 한글 다운로드 에러를 방지하기 위해 output 내용을 'bytes' 형식으로 강제 변환합니다.
     pdf_output = pdf.output()
     if isinstance(pdf_output, str):
         return pdf_output.encode('latin1')
