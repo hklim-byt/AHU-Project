@@ -63,32 +63,30 @@ def load_data():
 
 df = load_data()
 
-# 🌟 [PDF 생성 함수 구조 개선]: 서버와 로컬 환경 모두에서 안전하게 한글 폰트 로딩
+# 🌟 [PDF 생성 함수]: 스트림릿 다운로드 전용 바이너리 변환 문법 적용
 def generate_pdf(model_name, specs_list, input_conditions):
     pdf = FPDF()
     pdf.add_page()
     
-    # [수정]: 윈도우 고정 경로 대신, 현재 프로그램이 실행 중인 폴더 안의 malgun.ttf 파일을 우선 탐색합니다.
     font_name = "malgun.ttf"
     font_path = os.path.join(os.getcwd(), font_name)
     
-    # 만약 폴더 안에 없고 내 컴퓨터(윈도우)에서 돌릴 때를 대비한 백업 경로 추가
     if not os.path.exists(font_path):
         font_path = "C:\\Windows\\Fonts\\malgun.ttf"
         
+    has_korean = False
     try:
-        # 파일이 존재하는지 확실히 체크 후 폰트 등록
         if os.path.exists(font_path):
             pdf.add_font("Malgun", "", font_path)
             pdf.set_font("Malgun", size=11)
+            has_korean = True
         else:
-            # 폰트 파일이 아예 안 올라왔을 때 최후의 보루 (영어 기본 폰트로 튕김 에러 방지)
             pdf.set_font("helvetica", size=11)
     except:
         pdf.set_font("helvetica", size=11)
 
     # 1. 문서 헤더
-    try:
+    if has_korean:
         pdf.set_font("Malgun", style="B", size=20)
         pdf.set_text_color(30, 41, 59)
         pdf.cell(190, 15, txt="루트에어 AHU 장비 선정 성적서", ln=True, align="C")
@@ -96,58 +94,68 @@ def generate_pdf(model_name, specs_list, input_conditions):
         pdf.set_font("Malgun", size=9)
         pdf.set_text_color(100, 116, 139)
         pdf.cell(190, 5, txt="ROOT AIR CO., LTD. | Technical Selection Report", ln=True, align="C")
-    except:
-        # 한글 깨짐 방지 폰트가 안 맞을 경우 영어 헤더 출력
+    else:
         pdf.set_font("helvetica", style="B", size=20)
+        pdf.set_text_color(30, 41, 59)
         pdf.cell(190, 15, txt="ROOT AIR - AHU Technical Report", ln=True, align="C")
     pdf.ln(10)
     
     # 2. 설계 조건 요약
-    try:
+    if has_korean:
         pdf.set_font("Malgun", style="B", size=12)
         pdf.set_text_color(15, 23, 42)
         pdf.cell(190, 8, txt="[1] 설계 입력 조건 (Design Input)", ln=True, align="L")
         pdf.set_font("Malgun", size=10)
+    else:
+        pdf.set_font("helvetica", style="B", size=12)
+        pdf.cell(190, 8, txt="[1] Design Input Conditions", ln=True, align="L")
+        pdf.set_font("helvetica", size=10)
         
-        pdf.cell(45, 8, txt=" Required Air Flow:", border=1)
-        pdf.cell(50, 8, txt=f" {input_conditions['cmh']:,} CMH", border=1)
-        pdf.cell(45, 8, txt=" Cooling Load:", border=1)
-        pdf.cell(50, 8, txt=f" {input_conditions['cool']:,} kcal/h", border=1, ln=True)
-        
-        pdf.cell(45, 8, txt=" Heating Load:", border=1)
-        pdf.cell(50, 8, txt=f" {input_conditions['heat']:,} kcal/h", border=1)
-        pdf.cell(45, 8, txt=" Heating Source:", border=1)
-        pdf.cell(50, 8, txt=f" {input_conditions['heat_type']}", border=1, ln=True)
-    except:
-        pass
+    pdf.cell(45, 8, txt=" Required Air Flow:", border=1)
+    pdf.cell(50, 8, txt=f" {input_conditions['cmh']:,} CMH", border=1)
+    pdf.cell(45, 8, txt=" Cooling Load:", border=1)
+    pdf.cell(50, 8, txt=f" {input_conditions['cool']:,} kcal/h", border=1, ln=True)
+    
+    pdf.cell(45, 8, txt=" Heating Load:", border=1)
+    pdf.cell(50, 8, txt=f" {input_conditions['heat']:,} kcal/h", border=1)
+    pdf.cell(45, 8, txt=" Heating Source:", border=1)
+    pdf.cell(50, 8, txt=f" {input_conditions['heat_type']}", border=1, ln=True)
     pdf.ln(10)
     
     # 3. 선정 결과 상세 사양표
-    try:
+    if has_korean:
         pdf.set_font("Malgun", style="B", size=12)
         pdf.cell(190, 8, txt=f"[2] 추천 모델 사양 명세: {model_name}", ln=True, align="L")
-        
         pdf.set_font("Malgun", style="B", size=10)
-        pdf.set_fill_color(241, 245, 249)
-        pdf.cell(70, 8, txt=" 사양 항목 (Specification)", border=1, fill=True)
-        pdf.cell(120, 8, txt=" 기술 상세 데이터 (Technical Data)", border=1, fill=True, ln=True)
+    else:
+        pdf.set_font("helvetica", style="B", size=12)
+        pdf.cell(190, 8, txt=f"[2] Specification: {model_name}", ln=True, align="L")
+        pdf.set_font("helvetica", style="B", size=10)
         
+    pdf.set_fill_color(241, 245, 249)
+    pdf.cell(70, 8, txt=" Specification Item", border=1, fill=True)
+    pdf.cell(120, 8, txt=" Technical Data", border=1, fill=True, ln=True)
+    
+    if has_korean:
         pdf.set_font("Malgun", size=10)
-        for spec, val in specs_list:
-            pdf.cell(70, 8, txt=f" {spec}", border=1)
-            pdf.cell(120, 8, txt=f" {val}", border=1, ln=True)
-    except:
-        pass
+    else:
+        pdf.set_font("helvetica", size=10)
+        
+    for spec, val in specs_list:
+        pdf.cell(70, 8, txt=f" {spec}", border=1)
+        pdf.cell(120, 8, txt=f" {val}", border=1, ln=True)
         
     pdf.ln(15)
-    try:
+    if has_korean:
         pdf.set_font("Malgun", size=9)
         pdf.set_text_color(148, 163, 184)
         pdf.cell(190, 5, txt="* 본 성적서는 데이터베이스 기준 알고리즘에 의해 자동 생성된 기술 문서입니다.", ln=True, align="C")
-    except:
-        pass
     
-    return pdf.output()
+    # 🌟 [핵심 수정]: 스트림릿의 한글 다운로드 에러를 방지하기 위해 output 내용을 'bytes' 형식으로 강제 변환합니다.
+    pdf_output = pdf.output()
+    if isinstance(pdf_output, str):
+        return pdf_output.encode('latin1')
+    return bytes(pdf_output)
 
 if df is None:
     st.error("❌ 데이터베이스(CSV) 파일을 찾을 수 없거나 열 사양이 올바르지 않습니다.")
