@@ -76,7 +76,7 @@ if os.path.exists(db_filename):
 else:
     df = None
 
-# 김강산 기술대표님 구현 공식: 습공기 상태방정식 기반 실시간 공기 밀도 연산 함수
+# 습공기 상태방정식 기반 실시간 공기 밀도 연산 함수
 def calculate_air_density(db_temp, rh):
     abs_temp = db_temp + 273.15 
     std_pressure = 101325 
@@ -252,7 +252,8 @@ else:
         if has_korean:
             pdf.set_font("Malgun", style="", size=8.5)
             pdf.set_text_color(148, 163, 184)
-            pdf.cell(190, 5, txt="* 本 성적서는 김강산 기술대표 감수 습공기 선도 수식에 의해 공기밀도 보정이 완료된 엔지니어링 문서입니다.", ln=True, align="C")
+            # 🌟 [명칭 변경]: PDF 하단 공식 문구 정돈
+            pdf.cell(190, 5, txt="* 본 성적서는 루트에어 공기선도_RootAirChart v1.1 수식에 의해 실시간 공기밀도 보정이 완료된 정밀 엔지니어링 문서입니다.", ln=True, align="C")
         
         pdf_output = pdf.output()
         if isinstance(pdf_output, str):
@@ -273,7 +274,8 @@ else:
         ahu_type = st.radio("공조기 레이아웃 구조 선택", ["H형 (단일팬 컴팩트형)", "HI형 (환기팬 내장 풀스펙형)"])
         cmh = st.number_input("필요 풍량 (CMH)", value=4500, step=100)
         
-        with st.expander("🌡️ 김강산 대표님 실시간 공기밀도 보정 설정", expanded=True):
+        # 🌟 [명칭 변경]: 웹 화면 상의 온습도 설정 패널 명칭 전면 교체
+        with st.expander("🌡️ 루트에어 공기선도_RootAirChart v1.1 기반 공기밀도 설정", expanded=True):
             design_temp = st.number_input("현장 설계 건구온도 (°C)", value=20.0, step=1.0, min_value=-20.0, max_value=50.0)
             design_rh = st.slider("현장 설계 상대습도 (%)", value=50, min_value=0, max_value=100, step=5)
             
@@ -310,7 +312,6 @@ else:
                 st.session_state['d_rh'] = design_rh
                 st.session_state['d_rho'] = calculated_rho
             
-            # 🌟 [버그 수정 완료]: 세션 상태 이관 도중 발생할 수 있는 KeyError를 .get(key, default)로 차단!
             curr_cmh = st.session_state.get('cmh_val', cmh)
             curr_cool = st.session_state.get('cool_val', cool_req)
             curr_heat = st.session_state.get('heat_val', heat_req)
@@ -337,7 +338,7 @@ else:
                 candidates = type_filtered_df[type_filtered_df['Range_CMH_Max'] >= curr_cmh]
                 
             selected_row = None
-            status_msg = "✅ 김강산 기술대표 공기밀도 보정이 완료된 최적의 모델이 매칭되었습니다."
+            status_msg = "✅ 루트에어 공기선도 규격 기반 공기밀도 보정이 완료된 최적의 모델이 매칭되었습니다."
             status_type = "success"
 
             for _, row in candidates.iterrows():
