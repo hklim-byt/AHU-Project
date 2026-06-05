@@ -5,12 +5,12 @@ import streamlit as st
 
 # 웹페이지 기본 설정
 st.set_page_config(
-    page_title="우리 회사 전용 AHU 자동 선정 프로그램", 
+    page_title="루트코리아 AHU 자동 선정 프로그램", 
     page_icon="⚙️",
     layout="wide"
 )
 
-# 스타일 커스텀 (CSS)
+# 스타일 커스텀 (CSS) - 깔끔한 엔지니어링 블루 톤
 st.markdown("""
     <style>
     .main .block-container { padding-top: 2rem; }
@@ -45,7 +45,7 @@ if df is None:
     st.error("❌ 데이터베이스(CSV) 파일을 찾을 수 없습니다.")
 else:
     # 메인 타이틀 영역
-    st.title("⚙️ AHU 자동 선정 시스템 Web v1.1")
+    st.title("⚙️ AHU 자동 선정 시스템 Web v1.2")
     st.caption(f"📊 연결된 데이터베이스: {os.path.basename('AHU_Selection_Master_DB.csv')}")
     st.write("---")
 
@@ -66,10 +66,9 @@ else:
         st.write("")
         submit_btn = st.button("🔍 최적 장비 선정하기")
         
-        # 🌟 [AHRI 마크 배치] 
-        # ⚠️ 중요: 'YOUR_GITHUB_ID' 부분을 실제 본인의 깃허브 ID(닉네임)로 변경해 주세요!
+        # 🌟 [AHRI 마크 배치] - 깃허브 저장소(repo)에서 다이렉트로 이미지를 불러옵니다.
         st.write("---")
-        ahri_logo_url = "https://raw.githubusercontent.com/YOUR_GITHUB_ID/ahu-project/main/ahri_logo.png"
+        ahri_logo_url = "https://raw.githubusercontent.com/hklim-byt/repo/master/ahri_logo.png"
         st.image(ahri_logo_url, caption="AHRI Certified Performance", width=140, output_format="PNG")
 
     with col_result:
@@ -78,8 +77,8 @@ else:
         with col_res_title:
             st.subheader("2. 최적 모델 선정 결과 (Output)")
         with col_logo:
-            # ⚠️ 중요: 'YOUR_GITHUB_ID' 부분을 실제 본인의 깃허브 ID(닉네임)로 변경해 주세요!
-            company_logo_url = "https://raw.githubusercontent.com/YOUR_GITHUB_ID/ahu-project/main/company_logo.png"
+            # 🌟 [회사 로고 배치] - 깃허브 저장소(repo)에서 로고 이미지를 불러옵니다.
+            company_logo_url = "https://raw.githubusercontent.com/hklim-byt/repo/master/company_logo.png"
             st.image(company_logo_url, width=180, output_format="PNG")
             
         st.write("")
