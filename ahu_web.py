@@ -3,7 +3,7 @@ import csv
 import pandas as pd
 import streamlit as st
 
-# 웹페이지 기본 설정 (상단 브라우저 탭 이름 변경 완료 ✨)
+# 웹페이지 기본 설정
 st.set_page_config(
     page_title="루트에어 AHU Selection Program", 
     page_icon="⚙️",
@@ -14,13 +14,29 @@ st.set_page_config(
 st.markdown("""
     <style>
     .main .block-container { padding-top: 2rem; }
-    h1 { color: #1E293B; font-family: 'Malgun Gothic', sans-serif; }
+    /* 타이틀과 로고가 정렬되는 상단 바 스타일 */
+    .title-container {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 5px;
+    }
+    .title-container img {
+        height: 45px; /* 타이틀 글자 크기와 밸런스를 맞춘 로고 높이 */
+        object-fit: contain;
+    }
+    .title-container h1 {
+        margin: 0;
+        color: #1E293B;
+        font-family: 'Malgun Gothic', sans-serif;
+        font-size: 2.2rem;
+    }
     .stButton>button { width: 100%; font-weight: bold; background-color: #38BDF8 !important; color: #0F172A !important; border: none !important; }
     .stButton>button:hover { background-color: #0EA5E9 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 데이터베이스 로드 함수 (한글 인코딩 및 열 이름 공백 방지)
+# 데이터베이스 로드 함수
 @st.cache_data
 def load_data():
     db_filename = 'AHU_Selection_Master_DB.csv'
@@ -47,8 +63,23 @@ df = load_data()
 if df is None:
     st.error("❌ 데이터베이스(CSV) 파일을 찾을 수 없거나 열 사양이 올바르지 않습니다. 'AHU_Selection_Master_DB.csv' 파일의 헤더를 확인해 주세요.")
 else:
-    # 🌟 메인 타이틀 영역 이름 변경 완료 (변경 후: 루트에어 AHU Selection Program ✨)
-    st.title("⚙️ 루트에어 AHU Selection Program")
+    # 🌟 [레이아웃 수정] 톱니바퀴 제거 후, 타이틀 왼쪽에 회사 로고 배치 (인라인 HTML 사용)
+    if os.path.exists("company_logo.png"):
+        # 로고 파일이 로컬에 있을 때 Base64 형태로 상단에 안전하게 인라인 배치하기 위한 스트림릿 표준 방식
+        import base64
+        with open("company_logo.png", "rb") as image_file:
+            encoded_logo = base64.b64encode(image_file.read()).decode()
+        
+        st.markdown(f"""
+            <div class="title-container">
+                <img src="data:image/png;base64,{encoded_logo}" alt="Company Logo">
+                <h1>루트에어 AHU Selection Program</h1>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        # 혹시 로고 파일이 순간적으로 누락되었을 때를 대비한 기본 텍스트 타이틀
+        st.title("루트에어 AHU Selection Program")
+        
     st.caption(f"📊 Connected Database: {os.path.basename('AHU_Selection_Master_DB.csv')}")
     st.write("---")
 
@@ -77,17 +108,8 @@ else:
             st.warning("⚠️ ahri_logo.png 파일이 폴더에 없습니다.")
 
     with col_result:
-        # [결과창 타이틀 & 회사 로고 가로 배열]
-        col_res_title, col_logo = st.columns([2, 1])
-        with col_res_title:
-            st.subheader("2. 최적 모델 선정 결과 (Output)")
-        with col_logo:
-            # [회사 로고 배치]
-            if os.path.exists("company_logo.png"):
-                st.image("company_logo.png", width=180)
-            else:
-                st.warning("⚠️ company_logo.png 파일이 폴더에 없습니다.")
-            
+        # 🌟 [레이아웃 수정] 기존 우측 상단 로고를 제거하여 결과창 타이틀을 더 깔끔하고 넓게 확보
+        st.subheader("2. 최적 모델 선정 결과 (Output)")
         st.write("")
 
         if submit_btn:
@@ -124,7 +146,7 @@ else:
                 res_data = {
                     "사양 구분": [
                         "표준 정격 풍량", "적정 풍량 범위", "정격 냉방능력", f"정격 난방능력 ({heat_label})",
-                        "공급팬 (SF) 사이즈", "공급팬 모터 동력", "환기팬 (RF) 사이즈", "환기팬 모력 동력",
+                        "공급팬 (SF) 사이즈", "공급팬 모터 동력", "환기팬 (RF) 사이즈", "환기팬 모터 동력",
                         "코일 패스 및 수량", "코일 크기 (H x W)", "정면 면적 (Face Area)", "필터 배열",
                         "표준 가습량", "냉온수 관경"
                     ],
