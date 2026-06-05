@@ -123,8 +123,8 @@ else:
                     selected_row = row
                     break
 
-            # 🌟 [에러 수정 포인트]: selected_row가 비어있는지 판단할 때 pandas 안전 검사법 적용
-            if selected_row is subdivision_is_none := (selected_row is None):
+            # 🌟 [문법 오류 수정 완료!]: 'is None'을 사용하여 안전하고 정확하게 체크합니다.
+            if selected_row is None:
                 all_larger = df[df['Range_CMH_Max'] >= cmh]
                 for _, row in all_larger.iterrows():
                     if row['Cooling_kcal_h'] >= cool_req and row[heat_col] >= heat_req:
@@ -133,7 +133,7 @@ else:
                         status_type = "warning"
                         break
 
-            # 🌟 [에러 수정 포인트]: 최종 출력 시에도 확실하게 None 체크
+            # 🌟 [문법 오류 수정 완료!]: 최종 출력부도 안전한 'is not None'으로 판단합니다.
             if selected_row is not None:
                 if status_type == "success":
                     st.success(status_msg)
