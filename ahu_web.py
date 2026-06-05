@@ -107,7 +107,7 @@ if df is None:
 elif 'Type_H_HI' not in df.columns:
     st.error("❌ [알림] 인터넷 서버가 아직 구버전 CSV 파일의 기억을 붙잡고 있습니다. [Clear cache]를 진행해 주세요.")
 else:
-    # 상단 메인 헤더 바 랜더링
+    # 상단 헤더 렌더링
     left_logo_html = ""
     right_logo_html = ""
     if os.path.exists("company_logo.png"):
@@ -142,8 +142,8 @@ else:
             footer_text = "Copyright © RootAir ALL RIGHTS RESERVED. | Tel: +82-02-2082-7654 | Email: rootair@rootair.co.kr"
             self.cell(190, 10, txt=footer_text, border=0, ln=False, align="C")
 
-    # PDF 생성 함수 (표의 행 높이를 6.8mm로 아주 미세하게 줄여 여백을 완벽 확보 🌟)
-    def generate_pdf(model_name, specs_list, input_conditions, project_info, density_info):
+    # PDF 생성 함수
+    def generate_pdf(model_name, specs_list, input_conditions, project_info, density_info, is_velocity_warning):
         pdf = RootAirPDF()
         pdf.add_page()
         
@@ -250,10 +250,26 @@ else:
             pdf.set_font("helvetica", size=9.2)
             
         for spec, val in specs_list:
-            pdf.cell(75, 6.8, txt=f" {spec}", border=1, fill=False)
-            pdf.cell(115, 6.8, txt=f" {val}", border=1, ln=True, fill=False)
+            # 🌟 [PDF 기능 제어]: 풍속 경고 상태이고 현재 그리는 행이 코일 면풍속 행이면 글씨를 빨간색(Red)으로 반전 강조
+            if is_velocity_warning and "코일 면풍속" in spec:
+                pdf.set_text_color(220, 38, 38) # 진한 빨간색
+                pdf.cell(75, 6.8, txt=f" {spec}", border=1, fill=False)
+                pdf.cell(115, 6.8, txt=f" {val}", border=1, ln=True, fill=False)
+                pdf.set_text_color(51, 65, 85) # 다시 일반 색상 복귀
+            else:
+                pdf.cell(75, 6.8, txt=f" {spec}", border=1, fill=False)
+                pdf.cell(115, 6.8, txt=f" {val}", border=1, ln=True, fill=False)
             
-        pdf.ln(6)
+        pdf.ln(4)
+        
+        # 🌟 [PDF 경고문구 동적 추가]: 풍속 초과 시 표 하단에 붉은색 경고 박스 라인 개설
+        if is_velocity_warning:
+            pdf.set_text_color(220, 38, 38)
+            if has_korean:
+                pdf.set_font("Malgun", style="", size=9.5)
+                pdf.cell(190, 6, txt="⚠️ 코일 면풍속이 2.5 m/s를 초과하여 응축수 비산 위험이 있습니다.", border=0, ln=True, align="L")
+            pdf.ln(2)
+
         if has_korean:
             pdf.set_font("Malgun", style="", size=8.5)
             pdf.set_text_color(148, 163, 184)
@@ -305,8 +321,7 @@ else:
             rho_cool = calculate_air_density(cool_temp, cool_rh)
             rho_heat = calculate_air_density(heat_temp, heat_rh)
             avg_calculated_rho = round((rho_cool + rho_heat) / 2.0, 4)
-            
-            st.metric(label="📊 통합 계산된 현장 평균 공기 밀도", value=f"{avg_calculated_rho} kg/m³", delta=f"{round(avg_calculated_rho - 1.2041, 4)} vs 표준")
+            st.metric(label="📊 통합 계산된 현장 평균 공기 밀도", value=f"{avg_calculated_rho} kg/m³")
             
         cool_req = st.number_input("요구 냉방부하 (kcal/h)", value=35000, step=1000)
         heat_req = st.number_input("요구 난방부하 (kcal/h)", value=25000, step=1000)
@@ -387,22 +402,26 @@ else:
                         break
 
             if selected_row is not None:
-                if status_type == "success":
-                    st.success(status_msg)
-                else:
-                    st.warning(status_msg)
-
+                # 기초 정보 카드 렌더링
                 st.info(f"📋 **Project:** {c_name} | 👤 **Author:** {c_author} | 📅 **Date:** {c_date} | 📍 **Location:** {curr_location.split(' ')[0]}")
                 st.warning(f"🌡️ **통합 공기밀도:** {v_rho} kg/m³ (보정 계수: {round(density_ratio, 3)}) | ❄️ **보정 냉방부하:** {int(corr_cool_req):,} kcal/h | 🔥 **보정 난방부하:** {int(corr_heat_req):,} kcal/h")
+
+                # 🌟 [풍속 연산 및 가드 배정]
+                face_area = float(selected_row['Face_Area_m2'])
+                coil_velocity = round(curr_cmh / (3600.0 * face_area), 2)
+                is_velocity_warning = coil_velocity >= 2.5 # 2.5 m/s 이상 감지 스위치
+
+                # 🌟 [웹 프로그램 화면상 비산 경고 알림 문구 연동]
+                if is_velocity_warning:
+                    st.error("⚠️ 경고: 코일 면풍속이 2.5 m/s를 초과하여 응축수 비산 위험이 있습니다. 필요시 풍량을 조절하거나 상위 규격 모델 검토가 권장됩니다.")
+                else:
+                    st.success(status_msg)
 
                 col_m1, col_m2 = st.columns([1, 1])
                 with col_m1:
                     st.metric(label="✨ 추천 모델명", value=selected_row['Model_Name'])
                 
-                # 🌟 [Coil 면풍속 공식 실시간 바인딩]: 풍량(curr_cmh)과 정면면적(Face_Area_m2)으로 풍속 산출
-                face_area = float(selected_row['Face_Area_m2'])
-                coil_velocity = round(curr_cmh / (3600.0 * face_area), 2)
-                
+                # 명칭 수정 완료: '코일 면풍속 (Coil Face Velocity)' 🌟
                 specs_list = [
                     ("표준 정격 풍량", f"{int(selected_row['STD_CMH']):,} CMH ({int(selected_row['Std_CMM'])} CMM)"),
                     ("적정 풍량 범위", f"{int(selected_row['Range_CMH_Min']):,} ~ {int(selected_row['Range_CMH_Max']):,} CMH"),
@@ -420,7 +439,7 @@ else:
                     ("코일 패스 및 수량", f"{int(selected_row['Coil_Pass'])} Pass / {int(selected_row['Coil_Qty'])} 개"),
                     ("코일 규격 크기 (H × W)", f"{int(selected_row['Coil_H'])} mm × {int(selected_row['Coil_W'])} mm"),
                     ("정면 면적 (Face Area)", f"{face_area} m²"),
-                    ("★ 실시간 코일 면풍속 (Face Velocity)", f"{coil_velocity} m/s"), # 🌟 [신규 출력 연동]
+                    ("코일 면풍속 (Coil Face Velocity)", f"{coil_velocity} m/s"), # 🌟 명칭 영문 수정 완료
                     ("필터 배열 구조", f"{selected_row['Filter_Row']} 단 × {selected_row['Filter_Col']} 열"),
                     ("표준 정격 가습량", f"{int(selected_row['Humid_kg_h'])} Kg/h"),
                     ("냉온수 배관 관경", f"{int(selected_row['Conn_Cool_In_Out_A'])} A × {int(selected_row['Conn_Cool_Qty'])} 개")
@@ -439,7 +458,8 @@ else:
                     'c_temp': v_ct, 'c_rh': v_cr, 'h_temp': v_ht, 'h_rh': v_hr
                 }
                 
-                pdf_bytes = generate_pdf(selected_row['Model_Name'], specs_list, input_conditions, project_info, density_info)
+                # PDF 생성 시 경고 조건 플래그(is_velocity_warning) 추가 전달 🌟
+                pdf_bytes = generate_pdf(selected_row['Model_Name'], specs_list, input_conditions, project_info, density_info, is_velocity_warning)
                 
                 with col_m2:
                     st.write("") 
