@@ -3,14 +3,14 @@ import csv
 import pandas as pd
 import streamlit as st
 
-# 웹페이지 기본 설정 (상단 타이틀, 와이드 레이아웃)
+# 웹페이지 기본 설정
 st.set_page_config(
     page_title="우리 회사 전용 AHU 자동 선정 프로그램", 
     page_icon="⚙️",
     layout="wide"
 )
 
-# 스타일 커스텀 (CSS) - 깔끔하고 신뢰감 있는 엔지니어링 톤앤매너
+# 스타일 커스텀 (CSS)
 st.markdown("""
     <style>
     .main .block-container { padding-top: 2rem; }
@@ -20,19 +20,17 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 1. 데이터베이스 파일 찾기 및 로드
-@st.cache_data # 데이터를 매번 새로 읽지 않고 메모리에 기억해두는 똑똑한 기능
+# 데이터베이스 로드 함수
+@st.cache_data
 def load_data():
     db_filename = 'AHU_Selection_Master_DB.csv'
     if not os.path.exists(db_filename):
-        # 대소문자나 유사 이름 자동 검색
         current_dir = os.getcwd()
         files = [f for f in os.listdir(current_dir) if f.lower().endswith('.csv')]
         if files:
             db_filename = files[0]
         else:
             return None
-            
     try:
         return pd.read_csv(db_filename, encoding='utf-8')
     except Exception:
@@ -44,20 +42,19 @@ def load_data():
 df = load_data()
 
 if df is None:
-    st.error("❌ 폴더 안에서 데이터베이스(CSV) 파일을 찾을 수 없습니다. 'AHU_Selection_Master_DB.csv' 파일이 같은 폴더에 있는지 확인해 주세요.")
+    st.error("❌ 데이터베이스(CSV) 파일을 찾을 수 없습니다.")
 else:
-    # 상단 대시보드 타이틀
-    st.title("⚙️ AHU 자동 선정 시스템 Web v1.0")
+    # 메인 타이틀 영역
+    st.title("⚙️ AHU 자동 선정 시스템 Web v1.1")
     st.caption(f"📊 연결된 데이터베이스: {os.path.basename('AHU_Selection_Master_DB.csv')}")
     st.write("---")
 
-    # 화면을 좌측(입력창, 10)과 우측(결과창, 2) 비율로 분할
+    # 화면 분할 (입력창 1 : 결과창 2)
     col_input, col_result = st.columns([1, 2], gap="large")
 
     with col_input:
         st.subheader("1. 설계 조건 입력 (Input)")
         
-        # 입력 필드들 생성
         cmh = st.number_input("필요 풍량 (CMH)", value=4500, step=100)
         cool_req = st.number_input("요구 냉방부하 (kcal/h)", value=35000, step=1000)
         heat_req = st.number_input("요구 난방부하 (kcal/h)", value=25000, step=1000)
@@ -68,14 +65,27 @@ else:
 
         st.write("")
         submit_btn = st.button("🔍 최적 장비 선정하기")
+        
+        # 🌟 [AHRI 마크 배치] 
+        # ⚠️ 중요: 'YOUR_GITHUB_ID' 부분을 실제 본인의 깃허브 ID(닉네임)로 변경해 주세요!
+        st.write("---")
+        ahri_logo_url = "https://raw.githubusercontent.com/YOUR_GITHUB_ID/ahu-project/main/ahri_logo.png"
+        st.image(ahri_logo_url, caption="AHRI Certified Performance", width=140, output_format="PNG")
 
     with col_result:
-        st.subheader("2. 최적 모델 선정 결과 (Output)")
-        
-        if submit_btn:
-            # 선정 로직 가동
-            candidates = df[(df['Range_CMH_Min'] <= cmh) & (cmh <= df['Range_CMH_Max'])]
+        # 🌟 [결과창 타이틀 & 회사 로고 가로 배열]
+        col_res_title, col_logo = st.columns([2, 1])
+        with col_res_title:
+            st.subheader("2. 최적 모델 선정 결과 (Output)")
+        with col_logo:
+            # ⚠️ 중요: 'YOUR_GITHUB_ID' 부분을 실제 본인의 깃허브 ID(닉네임)로 변경해 주세요!
+            company_logo_url = "https://raw.githubusercontent.com/YOUR_GITHUB_ID/ahu-project/main/company_logo.png"
+            st.image(company_logo_url, width=180, output_format="PNG")
             
+        st.write("")
+
+        if submit_btn:
+            candidates = df[(df['Range_CMH_Min'] <= cmh) & (cmh <= df['Range_CMH_Max'])]
             if candidates.empty:
                 candidates = df[df['Range_CMH_Max'] >= cmh]
                 
@@ -88,7 +98,6 @@ else:
                     selected_row = row
                     break
 
-            # 업사이징 로직
             if not selected_row:
                 all_larger = df[df['Range_CMH_Max'] >= cmh]
                 for _, row in all_larger.iterrows():
@@ -99,16 +108,13 @@ else:
                         break
 
             if selected_row is not None:
-                # 상태 메시지 출력
                 if status_type == "success":
                     st.success(status_msg)
                 else:
                     st.warning(status_msg)
 
-                # 메트릭 카드로 추천 모델 강조
                 st.metric(label="✨ 추천 모델명", value=selected_row['Model_Name'])
                 
-                # 사양 테이블 깔끔하게 구성
                 res_data = {
                     "사양 구분": [
                         "표준 정격 풍량", "적정 풍량 범위", "정격 냉방능력", f"정격 난방능력 ({heat_label})",
@@ -134,9 +140,7 @@ else:
                     ]
                 }
                 res_df = pd.DataFrame(res_data)
-                # 인덱스 숨기고 테이블 출력
                 st.dataframe(res_df, use_container_width=True, hide_index=True)
-                
             else:
                 st.error("❌ 에러: 요구하는 열부하 용량이 너무 커서 데이터베이스 내에 매칭 가능한 모델이 없습니다.")
         else:
