@@ -63,9 +63,8 @@ df = load_data()
 if df is None:
     st.error("❌ 데이터베이스(CSV) 파일을 찾을 수 없거나 열 사양이 올바르지 않습니다. 'AHU_Selection_Master_DB.csv' 파일의 헤더를 확인해 주세요.")
 else:
-    # 🌟 [레이아웃 수정] 톱니바퀴 제거 후, 타이틀 왼쪽에 회사 로고 배치 (인라인 HTML 사용)
+    # 타이틀 왼쪽에 회사 로고 배치
     if os.path.exists("company_logo.png"):
-        # 로고 파일이 로컬에 있을 때 Base64 형태로 상단에 안전하게 인라인 배치하기 위한 스트림릿 표준 방식
         import base64
         with open("company_logo.png", "rb") as image_file:
             encoded_logo = base64.b64encode(image_file.read()).decode()
@@ -77,7 +76,6 @@ else:
             </div>
             """, unsafe_allow_html=True)
     else:
-        # 혹시 로고 파일이 순간적으로 누락되었을 때를 대비한 기본 텍스트 타이틀
         st.title("루트에어 AHU Selection Program")
         
     st.caption(f"📊 Connected Database: {os.path.basename('AHU_Selection_Master_DB.csv')}")
@@ -108,7 +106,6 @@ else:
             st.warning("⚠️ ahri_logo.png 파일이 폴더에 없습니다.")
 
     with col_result:
-        # 🌟 [레이아웃 수정] 기존 우측 상단 로고를 제거하여 결과창 타이틀을 더 깔끔하고 넓게 확보
         st.subheader("2. 최적 모델 선정 결과 (Output)")
         st.write("")
 
@@ -126,7 +123,8 @@ else:
                     selected_row = row
                     break
 
-            if not selected_row:
+            # 🌟 [에러 수정 포인트]: selected_row가 비어있는지 판단할 때 pandas 안전 검사법 적용
+            if selected_row is subdivision_is_none := (selected_row is None):
                 all_larger = df[df['Range_CMH_Max'] >= cmh]
                 for _, row in all_larger.iterrows():
                     if row['Cooling_kcal_h'] >= cool_req and row[heat_col] >= heat_req:
@@ -135,6 +133,7 @@ else:
                         status_type = "warning"
                         break
 
+            # 🌟 [에러 수정 포인트]: 최종 출력 시에도 확실하게 None 체크
             if selected_row is not None:
                 if status_type == "success":
                     st.success(status_msg)
