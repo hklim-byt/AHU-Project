@@ -142,7 +142,7 @@ else:
             footer_text = "Copyright © RootAir ALL RIGHTS RESERVED. | Tel: +82-02-2082-7654 | Email: rootair@rootair.co.kr"
             self.cell(190, 10, txt=footer_text, border=0, ln=False, align="C")
 
-    # PDF 생성 함수
+    # PDF 생성 함수 (표의 행 높이를 6.8mm로 아주 미세하게 줄여 여백을 완벽 확보 🌟)
     def generate_pdf(model_name, specs_list, input_conditions, project_info, density_info):
         pdf = RootAirPDF()
         pdf.add_page()
@@ -205,32 +205,31 @@ else:
             pdf.cell(190, 8, txt="[1] Design Input & Density Correction", ln=True, align="L")
             pdf.set_font("helvetica", size=9.5)
             
-        pdf.cell(45, 7, txt=" Required Air Flow:", border=1)
-        pdf.cell(50, 7, txt=f" {input_conditions['cmh']:,} CMH", border=1)
-        pdf.cell(45, 7, txt=" Unit Layout Type:", border=1)
-        pdf.cell(50, 7, txt=f" {input_conditions['ahu_type_label']}", border=1, ln=True)
+        pdf.cell(45, 6.8, txt=" Required Air Flow:", border=1)
+        pdf.cell(50, 6.8, txt=f" {input_conditions['cmh']:,} CMH", border=1)
+        pdf.cell(45, 6.8, txt=" Unit Layout Type:", border=1)
+        pdf.cell(50, 6.8, txt=f" {input_conditions['ahu_type_label']}", border=1, ln=True)
         
-        pdf.cell(45, 7, txt=" Input Cooling Load:", border=1)
-        pdf.cell(50, 7, txt=f" {input_conditions['cool']:,} kcal/h", border=1)
-        pdf.cell(45, 7, txt=" Corrected Cool Load:", border=1)
-        pdf.cell(50, 7, txt=f" {int(density_info['corr_cool']):,} kcal/h", border=1, ln=True)
+        pdf.cell(45, 6.8, txt=" Input Cooling Load:", border=1)
+        pdf.cell(50, 6.8, txt=f" {input_conditions['cool']:,} kcal/h", border=1)
+        pdf.cell(45, 6.8, txt=" Corrected Cool Load:", border=1)
+        pdf.cell(50, 6.8, txt=f" {int(density_info['corr_cool']):,} kcal/h", border=1, ln=True)
         
-        pdf.cell(45, 7, txt=" Input Heating Load:", border=1)
-        pdf.cell(50, 7, txt=f" {input_conditions['heat']:,} kcal/h", border=1)
-        pdf.cell(45, 7, txt=" Corrected Heat Load:", border=1)
-        pdf.cell(50, 7, txt=f" {int(density_info['corr_heat']):,} kcal/h", border=1, ln=True)
+        pdf.cell(45, 6.8, txt=" Input Heating Load:", border=1)
+        pdf.cell(50, 6.8, txt=f" {input_conditions['heat']:,} kcal/h", border=1)
+        pdf.cell(45, 6.8, txt=" Corrected Heat Load:", border=1)
+        pdf.cell(50, 6.8, txt=f" {int(density_info['corr_heat']):,} kcal/h", border=1, ln=True)
         
-        # 🌟 [성적서 반영]: 성적서에 설치 지역 메타데이터 정보 추가 기록
-        pdf.cell(45, 7, txt=" Project Location:", border=1)
-        pdf.cell(50, 7, txt=f" {density_info['location']}", border=1)
-        pdf.cell(45, 7, txt=" Real Air Density:", border=1)
-        pdf.cell(50, 7, txt=f" {density_info['density']} kg/m3", border=1, ln=True)
+        pdf.cell(45, 6.8, txt=" Project Location:", border=1)
+        pdf.cell(50, 6.8, txt=f" {density_info['location']}", border=1)
+        pdf.cell(45, 6.8, txt=" Real Air Density:", border=1)
+        pdf.cell(50, 6.8, txt=f" {density_info['density']} kg/m3", border=1, ln=True)
         
-        pdf.cell(45, 7, txt=" Corrected Temp (C/H):", border=1)
-        pdf.cell(50, 7, txt=f" {density_info['c_temp']} C / {density_info['h_temp']} C", border=1)
-        pdf.cell(45, 7, txt=" Corrected RH (C/H):", border=1)
-        pdf.cell(50, 7, txt=f" {density_info['c_rh']} % / {density_info['h_rh']} %", border=1)
-        pdf.ln(8)
+        pdf.cell(45, 6.8, txt=" Corrected Temp (C/H):", border=1)
+        pdf.cell(50, 6.8, txt=f" {density_info['c_temp']} C / {density_info['h_temp']} C", border=1)
+        pdf.cell(45, 6.8, txt=" Corrected RH (C/H):", border=1)
+        pdf.cell(50, 6.8, txt=f" {density_info['c_rh']} % / {density_info['h_rh']} %", border=1, ln=True)
+        pdf.ln(6)
         
         if has_korean:
             pdf.set_font("Malgun", style="", size=12)
@@ -242,19 +241,19 @@ else:
             pdf.set_font("helvetica", style="B", size=10)
             
         pdf.set_fill_color(241, 245, 249)
-        pdf.cell(75, 7, txt=" Specification Item", border=1, fill=True)
-        pdf.cell(115, 7, txt=" Technical Data", border=1, fill=True, ln=True)
+        pdf.cell(75, 6.8, txt=" Specification Item", border=1, fill=True)
+        pdf.cell(115, 6.8, txt=" Technical Data", border=1, fill=True, ln=True)
         
         if has_korean:
-            pdf.set_font("Malgun", style="", size=9.5)
+            pdf.set_font("Malgun", style="", size=9.2)
         else:
-            pdf.set_font("helvetica", size=9.5)
+            pdf.set_font("helvetica", size=9.2)
             
         for spec, val in specs_list:
-            pdf.cell(75, 7, txt=f" {spec}", border=1, fill=False)
-            pdf.cell(115, 7, txt=f" {val}", border=1, ln=True, fill=False)
+            pdf.cell(75, 6.8, txt=f" {spec}", border=1, fill=False)
+            pdf.cell(115, 6.8, txt=f" {val}", border=1, ln=True, fill=False)
             
-        pdf.ln(8)
+        pdf.ln(6)
         if has_korean:
             pdf.set_font("Malgun", style="", size=8.5)
             pdf.set_text_color(148, 163, 184)
@@ -274,7 +273,6 @@ else:
         proj_name = st.text_input("프로젝트 명", placeholder="예: OO빌딩 신축공사")
         proj_author = st.text_input("작성자", placeholder="예: 홍길동 팀장")
         
-        # 🌟 [시나리오 A 핵심]: 기상 데이터 기반 전국 주요 설치 지역 선택 콤보박스 신설
         location_select = st.selectbox("전국 주요 설치 지역 선택 (WeatherData 연동)", ["서울 (Seoul)", "부산 (Busan)", "대구 (Daegu)", "광주 (Gwangju)", "제주 (Jeju)", "기타 (사용자 수동 설정)"])
         
         st.write("---")
@@ -282,7 +280,6 @@ else:
         ahu_type = st.radio("공조기 레이아웃 구조 선택", ["H형 (단일팬 컴팩트형)", "HI형 (환기팬 내장 풀스펙형)"])
         cmh = st.number_input("필요 풍량 (CMH)", value=4500, step=100)
         
-        # 🌟 [시나리오 A + B 통합 연산부]: 선택한 지역에 따라 온습도 마스터 값을 자동 로딩 및 가변 제어
         with st.expander("🌡️ 루트에어 공기선도_RootAirChart v1.1 기반 공기밀도 설정", expanded=True):
             if "서울" in location_select:
                 c_init_t, c_init_rh, h_init_t, h_init_rh = 32.0, 65, -10.0, 60
@@ -299,20 +296,17 @@ else:
                 
             st.caption(f"📢 현재 선택 지역: **{location_select.split(' ')[0]}** 표준 기상 설계 기준 자동 매칭 적용 중")
             
-            # 냉방 / 난방 시점의 공기 밀도가 각각 다르므로 통합 대표 밀도 도출을 위한 듀얼 가이드 패널 구축
             cool_temp = st.number_input("냉방 설계 외기 온도 (°C)", value=c_init_t, step=0.5)
             cool_rh = st.slider("냉방 설계 상대습도 (%)", value=c_init_rh, min_value=0, max_value=100, step=5)
             
             heat_temp = st.number_input("난방 설계 외기 온도 (°C)", value=h_init_t, step=0.5)
             heat_rh = st.slider("난방 설계 상대습도 (%)", value=h_init_rh, min_value=0, max_value=100, step=5)
             
-            # 각각의 밀도 연산 진행 후 평균 현장 밀도로 안전 연산 진행 🌟
             rho_cool = calculate_air_density(cool_temp, cool_rh)
             rho_heat = calculate_air_density(heat_temp, heat_rh)
             avg_calculated_rho = round((rho_cool + rho_heat) / 2.0, 4)
             
             st.metric(label="📊 통합 계산된 현장 평균 공기 밀도", value=f"{avg_calculated_rho} kg/m³", delta=f"{round(avg_calculated_rho - 1.2041, 4)} vs 표준")
-            st.caption(f"(참고 - 여름철 밀도: {rho_cool} kg/m³ | 겨울철 밀도: {rho_heat} kg/m³)")
             
         cool_req = st.number_input("요구 냉방부하 (kcal/h)", value=35000, step=1000)
         heat_req = st.number_input("요구 난방부하 (kcal/h)", value=25000, step=1000)
@@ -340,8 +334,6 @@ else:
                 st.session_state['p_date'] = proj_date.strftime("%Y년 %m월 %d일")
                 st.session_state['p_name'] = proj_name if proj_name else "미지정 프로젝트"
                 st.session_state['p_author'] = proj_author if proj_author else "담당자"
-                
-                # 🌟 시나리오 A+B 연산 파라미터 백업
                 st.session_state['c_t'] = cool_temp
                 st.session_state['c_r'] = cool_rh
                 st.session_state['h_t'] = heat_temp
@@ -366,7 +358,6 @@ else:
             v_hr = st.session_state.get('h_r', heat_rh)
             v_rho = st.session_state.get('final_rho', avg_calculated_rho)
             
-            # 부하 가중 보정률 계산 (표준 밀도 대비 역산) 🌟
             density_ratio = 1.2041 / v_rho
             corr_cool_req = curr_cool * density_ratio
             corr_heat_req = curr_heat * density_ratio
@@ -408,6 +399,10 @@ else:
                 with col_m1:
                     st.metric(label="✨ 추천 모델명", value=selected_row['Model_Name'])
                 
+                # 🌟 [Coil 면풍속 공식 실시간 바인딩]: 풍량(curr_cmh)과 정면면적(Face_Area_m2)으로 풍속 산출
+                face_area = float(selected_row['Face_Area_m2'])
+                coil_velocity = round(curr_cmh / (3600.0 * face_area), 2)
+                
                 specs_list = [
                     ("표준 정격 풍량", f"{int(selected_row['STD_CMH']):,} CMH ({int(selected_row['Std_CMM'])} CMM)"),
                     ("적정 풍량 범위", f"{int(selected_row['Range_CMH_Min']):,} ~ {int(selected_row['Range_CMH_Max']):,} CMH"),
@@ -424,7 +419,8 @@ else:
                     ("환기팬 모터 동력", f"{selected_row['RF_Motor_kW']} kW (정압 {int(selected_row['RF_Static_mmAq'])} mmAg)" if selected_row['Type_H_HI'] == 'HI' else "- (컴팩트형 제외)"),
                     ("코일 패스 및 수량", f"{int(selected_row['Coil_Pass'])} Pass / {int(selected_row['Coil_Qty'])} 개"),
                     ("코일 규격 크기 (H × W)", f"{int(selected_row['Coil_H'])} mm × {int(selected_row['Coil_W'])} mm"),
-                    ("정면 면적 (Face Area)", f"{selected_row['Face_Area_m2']} m²"),
+                    ("정면 면적 (Face Area)", f"{face_area} m²"),
+                    ("★ 실시간 코일 면풍속 (Face Velocity)", f"{coil_velocity} m/s"), # 🌟 [신규 출력 연동]
                     ("필터 배열 구조", f"{selected_row['Filter_Row']} 단 × {selected_row['Filter_Col']} 열"),
                     ("표준 정격 가습량", f"{int(selected_row['Humid_kg_h'])} Kg/h"),
                     ("냉온수 배관 관경", f"{int(selected_row['Conn_Cool_In_Out_A'])} A × {int(selected_row['Conn_Cool_Qty'])} 개")
