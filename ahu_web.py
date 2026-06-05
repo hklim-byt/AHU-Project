@@ -66,9 +66,9 @@ else:
         st.write("")
         submit_btn = st.button("🔍 최적 장비 선정하기")
         
-        # 🌟 [AHRI 마크 배치] - 깃허브 저장소(repo)에서 다이렉트로 이미지를 불러옵니다.
+        # 🌟 [AHRI 마크 배치] - 실제 깃허브 주소인 root-air-selection 으로 경로를 수정했습니다!
         st.write("---")
-        ahri_logo_url = "https://raw.githubusercontent.com/hklim-byt/repo/master/ahri_logo.png"
+        ahri_logo_url = "https://raw.githubusercontent.com/hklim-byt/root-air-selection/main/ahri_logo.png"
         st.image(ahri_logo_url, caption="AHRI Certified Performance", width=140, output_format="PNG")
 
     with col_result:
@@ -77,8 +77,8 @@ else:
         with col_res_title:
             st.subheader("2. 최적 모델 선정 결과 (Output)")
         with col_logo:
-            # 🌟 [회사 로고 배치] - 깃허브 저장소(repo)에서 로고 이미지를 불러옵니다.
-            company_logo_url = "https://raw.githubusercontent.com/hklim-byt/repo/master/company_logo.png"
+            # 🌟 [회사 로고 배치] - 실제 깃허브 주소인 root-air-selection 으로 경로를 수정했습니다!
+            company_logo_url = "https://raw.githubusercontent.com/hklim-byt/root-air-selection/main/company_logo.png"
             st.image(company_logo_url, width=180, output_format="PNG")
             
         st.write("")
