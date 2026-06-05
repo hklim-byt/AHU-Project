@@ -3,9 +3,9 @@ import csv
 import pandas as pd
 import streamlit as st
 
-# 웹페이지 기본 설정
+# 웹페이지 기본 설정 (상단 브라우저 탭 이름 변경 완료 ✨)
 st.set_page_config(
-    page_title="루트코리아 AHU 자동 선정 프로그램", 
+    page_title="루트에어 AHU Selection Program", 
     page_icon="⚙️",
     layout="wide"
 )
@@ -20,7 +20,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 데이터베이스 로드 함수 (한글 인코딩 및 열 이름 공백 공포증 해결)
+# 데이터베이스 로드 함수 (한글 인코딩 및 열 이름 공백 방지)
 @st.cache_data
 def load_data():
     db_filename = 'AHU_Selection_Master_DB.csv'
@@ -32,11 +32,9 @@ def load_data():
         else:
             return None
             
-    # 인코딩 문제로 인한 열 이름 깨짐 방지 처리
     for enc in ['utf-8', 'cp949', 'utf-8-sig']:
         try:
             df = pd.read_csv(db_filename, encoding=enc)
-            # 열 이름 앞뒤에 혹시 있을지 모르는 공백 제거
             df.columns = df.columns.str.strip()
             if 'Range_CMH_Min' in df.columns:
                 return df
@@ -49,9 +47,9 @@ df = load_data()
 if df is None:
     st.error("❌ 데이터베이스(CSV) 파일을 찾을 수 없거나 열 사양이 올바르지 않습니다. 'AHU_Selection_Master_DB.csv' 파일의 헤더를 확인해 주세요.")
 else:
-    # 메인 타이틀 영역
-    st.title("⚙️ AHU 자동 선정 시스템 Web v1.3")
-    st.caption(f"📊 연결된 데이터베이스: {os.path.basename('AHU_Selection_Master_DB.csv')}")
+    # 🌟 메인 타이틀 영역 이름 변경 완료 (변경 후: 루트에어 AHU Selection Program ✨)
+    st.title("⚙️ 루트에어 AHU Selection Program")
+    st.caption(f"📊 Connected Database: {os.path.basename('AHU_Selection_Master_DB.csv')}")
     st.write("---")
 
     # 화면 분할 (입력창 1 : 결과창 2)
@@ -71,7 +69,7 @@ else:
         st.write("")
         submit_btn = st.button("🔍 최적 장비 선정하기")
         
-        # 🌟 [AHRI 마크 로컬 로딩 방식으로 변경]
+        # [AHRI 마크 배치]
         st.write("---")
         if os.path.exists("ahri_logo.png"):
             st.image("ahri_logo.png", caption="AHRI Certified Performance", width=140)
@@ -79,12 +77,12 @@ else:
             st.warning("⚠️ ahri_logo.png 파일이 폴더에 없습니다.")
 
     with col_result:
-        # 🌟 [결과창 타이틀 & 회사 로고 가로 배열]
+        # [결과창 타이틀 & 회사 로고 가로 배열]
         col_res_title, col_logo = st.columns([2, 1])
         with col_res_title:
             st.subheader("2. 최적 모델 선정 결과 (Output)")
         with col_logo:
-            # 🌟 [회사 로고 로컬 로딩 방식으로 변경]
+            # [회사 로고 배치]
             if os.path.exists("company_logo.png"):
                 st.image("company_logo.png", width=180)
             else:
@@ -126,7 +124,7 @@ else:
                 res_data = {
                     "사양 구분": [
                         "표준 정격 풍량", "적정 풍량 범위", "정격 냉방능력", f"정격 난방능력 ({heat_label})",
-                        "공급팬 (SF) 사이즈", "공급팬 모터 동력", "환기팬 (RF) 사이즈", "환기팬 모터 동력",
+                        "공급팬 (SF) 사이즈", "공급팬 모터 동력", "환기팬 (RF) 사이즈", "환기팬 모력 동력",
                         "코일 패스 및 수량", "코일 크기 (H x W)", "정면 면적 (Face Area)", "필터 배열",
                         "표준 가습량", "냉온수 관경"
                     ],
