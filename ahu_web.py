@@ -16,7 +16,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 스타일 커스텀 (CSS) - 모바일 반응형 완벽 대응
+# 스타일 커스텀 (CSS)
 st.markdown("""
     <style>
     .main .block-container { padding-top: 1.5rem; }
@@ -115,7 +115,6 @@ def calculate_absolute_humidity(db_temp, rh):
     x = 0.62194 * pw / (std_pressure - pw)
     return x
 
-# 습공기 상태방정식 기반 실시간 공기 밀도 연산 함수
 def calculate_air_density(db_temp, rh):
     abs_temp = db_temp + 273.15 
     std_pressure = 101325 
@@ -150,15 +149,10 @@ def calculate_wet_bulb(T, RH):
     except:
         return T
 
-# 🌟 [업그레이드]: Matplotlib 한글 폰트 주입 및 국/영문 말풍선 풀네임 가변 엔진
+# 🌟 [그래픽 엔진 완벽 보완]: 네모 박스로 한글이 깨지는 현상(Tofu)을 원천 차단하는 폰트 강제 주입 로직
 def generate_psychrometric_chart(t1, rh1, t2, rh2, is_korean):
     font_path = os.path.join(os.getcwd(), "malgun.ttf")
-    if os.path.exists(font_path):
-        prop = fm.FontProperties(fname=font_path)
-        plt.rcParams['font.family'] = prop.get_name()
-    else:
-        plt.rcParams['font.family'] = 'Malgun Gothic'
-    plt.rcParams['axes.unicode_minus'] = False
+    font_prop = fm.FontProperties(fname=font_path) if os.path.exists(font_path) else None
 
     fig, ax = plt.subplots(figsize=(10, 6))
     
@@ -181,7 +175,7 @@ def generate_psychrometric_chart(t1, rh1, t2, rh2, is_korean):
     ax.plot(t2, x2, 'bo', markersize=8)
     ax.annotate('', xy=(t2, x2), xytext=(t1, x1), arrowprops=dict(arrowstyle="->", color='gray', lw=2))
 
-    # 국문/영문 분기 말풍선 풀네임 세팅
+    # 국문/영문 풀네임 분기
     if is_korean:
         t1_lbl, t2_lbl = "입구 공기 (Inlet)", "출구 공기 (Outlet)"
         db_lbl, wb_lbl, ah_lbl, ent_lbl = "건구온도", "습구온도", "절대습도", "엔탈피"
@@ -195,19 +189,29 @@ def generate_psychrometric_chart(t1, rh1, t2, rh2, is_korean):
 
     bbox_props1 = dict(boxstyle="round,pad=0.5", fc="#ffe6e6", ec="red", lw=1.5, alpha=0.9)
     txt1 = f"[{t1_lbl}]\n{db_lbl}: {t1} ℃\n{wb_lbl}: {wb1} ℃\n{ah_lbl}: {round(x1, 4)} kg/kg'\n{ent_lbl}: {h1} kJ/kg"
-    ax.text(t1, x1 + 0.0015, txt1, ha="center", va="bottom", bbox=bbox_props1, fontsize=9, fontweight='bold')
-
+    
     bbox_props2 = dict(boxstyle="round,pad=0.5", fc="#e6f2ff", ec="blue", lw=1.5, alpha=0.9)
     txt2 = f"[{t2_lbl}]\n{db_lbl}: {t2} ℃\n{wb_lbl}: {wb2} ℃\n{ah_lbl}: {round(x2, 4)} kg/kg'\n{ent_lbl}: {h2} kJ/kg"
-    ax.text(t2, x2 - 0.0015, txt2, ha="center", va="top", bbox=bbox_props2, fontsize=9, fontweight='bold')
+    
+    # 폰트 프로퍼티가 있으면 강제 적용, 없으면 기본 적용
+    if font_prop:
+        ax.text(t1, x1 + 0.0015, txt1, ha="center", va="bottom", bbox=bbox_props1, fontproperties=font_prop, fontsize=10)
+        ax.text(t2, x2 - 0.0015, txt2, ha="center", va="top", bbox=bbox_props2, fontproperties=font_prop, fontsize=10)
+        ax.set_xlabel(x_label, fontproperties=font_prop, fontsize=11)
+        ax.set_ylabel(y_label, fontproperties=font_prop, fontsize=11)
+        ax.set_title(title_txt, fontproperties=font_prop, fontsize=15)
+        ax.legend(loc="upper left", prop=font_prop)
+    else:
+        ax.text(t1, x1 + 0.0015, txt1, ha="center", va="bottom", bbox=bbox_props1, fontsize=9, fontweight='bold')
+        ax.text(t2, x2 - 0.0015, txt2, ha="center", va="top", bbox=bbox_props2, fontsize=9, fontweight='bold')
+        ax.set_xlabel(x_label, fontweight='bold')
+        ax.set_ylabel(y_label, fontweight='bold')
+        ax.set_title(title_txt, fontweight='bold', fontsize=14)
+        ax.legend(loc="upper left")
 
     ax.set_xlim(-5, 45)
     ax.set_ylim(0, 0.035)
-    ax.set_xlabel(x_label, fontweight='bold')
-    ax.set_ylabel(y_label, fontweight='bold')
-    ax.set_title(title_txt, fontweight='bold', fontsize=14)
     ax.grid(True, linestyle=':', alpha=0.6)
-    ax.legend(loc="upper left")
     
     plt.tight_layout()
     fig.savefig("psychro_chart.png", dpi=200)
@@ -216,7 +220,6 @@ def generate_psychrometric_chart(t1, rh1, t2, rh2, is_korean):
 if df is None:
     st.error("❌ 데이터베이스(CSV) 파일을 찾을 수 없습니다.")
 else:
-    # 상단 로고 바 렌더링
     left_logo_html = ""
     right_logo_html = ""
     if os.path.exists("company_logo.png"):
@@ -250,7 +253,7 @@ else:
             footer_text = "Copyright © RootAir ALL RIGHTS RESERVED. | Tel: +82-02-2082-7654 | Email: rootair@rootair.co.kr"
             self.cell(190, 8, txt=footer_text, border=0, ln=False, align="C")
 
-    # 🌟 [글로벌 엔진]: 국문/영문 스위칭에 따른 PDF 렌더링 완벽 분기
+    # 🌟 PDF 출력 엔진
     def generate_pdf(model_name, specs_list, input_conditions, project_info, density_info, coil_calc_info, is_velocity_warning, is_korean):
         pdf = RootAirPDF()
         pdf.add_page()
@@ -339,6 +342,7 @@ else:
         l_lmtd = " 냉방 대수평균 (LMTD):" if is_korean else " Cooling LMTD:"
         l_vel = " 코일 관내 유속 (Water):" if is_korean else " Tube Water Velocity:"
         
+        # 🌟 글자 겹침 버그 원천 수정: ISP/ESP 텍스트를 제거하고 43 셀 안에 안전하게 표기
         pdf.cell(52, 4.2, txt=l_c_type, border=1)
         pdf.cell(43, 4.2, txt=f" {coil_calc_info['cool_type']}", border=1)
         pdf.cell(52, 4.2, txt=l_h_temp, border=1)
@@ -383,7 +387,7 @@ else:
             pdf.cell(190, 3.8, txt=warn_txt, border=0, ln=True, align="L")
             pdf.ln(0.5)
 
-        # 🌟 2페이지 추가 로직: 공기선도 프로세스
+        # 2페이지 추가 로직: 공기선도 프로세스
         pdf.add_page()
         
         if os.path.exists("company_logo.png"):
@@ -503,7 +507,6 @@ else:
         heat_type = st.radio("난방 코일 열원 종류", ["온수 (Water)", "증기 (Steam)"])
         
         st.write("---")
-        # 🌟 글로벌 출력 언어 선택 스위치 신설
         report_lang = st.radio("📄 보고서 출력 언어 (Report Language)", ["한국어 (Korean)", "English (영문)"], horizontal=True)
 
         st.write("")
@@ -640,16 +643,16 @@ else:
                     cool_lmtd_str = f"{round(((v_ct - v_cc_tw2) - (15.0 - v_cc_tw1)) / math.log(max(1.01, (v_ct - v_cc_tw2)) / max(1.0, (15.0 - v_cc_tw1))), 1)} C"
                     db_pass = float(selected_row['Coil_Pass']) if 'Coil_Pass' in selected_row else 18.0
                     water_velocity_str = f"{round((cool_lpm_val / 60000.0) / (db_pass * math.pi * (0.0127**2) / 4.0), 2)} m/s (안정)"
-                    cool_type_label = "냉수 코일" if is_kor else "Chilled Water"
                     
+                    cool_type_label = "냉수 코일" if is_kor else "Chilled Water"
                     outlet_temp_for_chart = 15.0
                     outlet_rh_for_chart = 95.0
                 else:
                     cool_lpm_str = "N/A"
                     cool_lmtd_str = "N/A"
                     water_velocity_str = "N/A"
-                    cool_type_label = f"DX 코일({v_dx_evap}C)" if is_kor else f"DX Coil ({v_dx_evap}C)"
                     
+                    cool_type_label = f"DX 코일({v_dx_evap}℃)" if is_kor else f"DX Coil ({v_dx_evap}C)"
                     outlet_temp_for_chart = 13.0
                     outlet_rh_for_chart = 90.0
                 
@@ -673,7 +676,7 @@ else:
                     required_humid_kg_h = 0.0
 
                 if is_velocity_warning:
-                    st.error("⚠️ 경고: 코일 면풍속이 2.5 m/s를 초과하여 응축수 비산 위험이 있습니다. 대형 규격 모델 검토를 강력 권장합니다.")
+                    st.error("⚠️ 경고: 코일 면풍속이 2.5 m/s를 초과하여 응축수 비산 위험이 있습니다. 대형 규격 모델 검토를 강력 권장합니다." if is_kor else "⚠️ Warning: Face velocity exceeds 2.5m/s. Risk of water carryover.")
                 else:
                     st.success(status_msg)
 
@@ -688,7 +691,7 @@ else:
                 
                 f_row, f_col = selected_row['Filter_Row'], selected_row['Filter_Col']
                 
-                # 🌟 [글로벌 스탠다드 엔진]: 국문/영문 선택에 따른 스펙 리스트 자동 번역 적용
+                # 🌟 [글자 깨짐 방지 영문 픽스]: '단/열/개'를 글로벌 스탠다드 Row/Col/EA로 전면 수정하여 Tofu 버그 차단
                 if is_kor:
                     specs_list = [
                         ("표준 정격 풍량", f"{int(selected_row['STD_CMH']):,} CMH ({int(selected_row['Std_CMM'])} CMM)"),
@@ -696,11 +699,11 @@ else:
                         ("선택 냉방 열원 종류", f"{cool_type_label}"),
                         ("정격 냉방능력", f"{int(selected_row['Cooling_kcal_h']):,} kcal/h"),
                         (f"정격 난방능력 ({heat_label})", f"{int(selected_row[heat_col]):,} kcal/h"),
-                        ("동파방지 예열코일 (Pre-Heater)", "장착 완료 (카탈로그 2-Row 규격 매칭)" if v_opt_anti else "미장착 (None)"),
+                        ("동파방지 예열코일 (Pre-Heater)", "장착 완료 (2-Row 표준 매칭)" if v_opt_anti else "미장착 (None)"),
                         ("가습 장치 종류 (Humidifier)", f"{v_opt_humid.split(' (')[0]}"),
                         ("★ 현장 요구 가습량 (Required)", f"{required_humid_kg_h} kg/h (실시간 부하 역산)"), 
                         ("장비 정격 가습량 (Actual)", f"{int(selected_row['Humid_kg_h'])} kg/h (루트에어 마스터 규격)"),
-                        ("엘리미네이터 (Eliminator)", "장착 완료 (응축수 비산방지 프로텍터)" if v_opt_elim else "미장착"),
+                        ("엘리미네이터 (Eliminator)", "장착 완료 (응축수 비산방지용)" if v_opt_elim else "미장착"),
                         ("실시간 계산 기내 정압 (ISP)", f"{calculated_internal_static} mmAq (본체 + 필터 + 옵션 저항)"), 
                         ("설계 기외 정압 (ESP)", f"{curr_ext_static} mmAq (현장 덕트 마찰 저항)"), 
                         ("합산 보정 최종 전정압 (TSP)", f"{total_static_pressure} mmAq (송풍기 정격 압력)"), 
@@ -710,13 +713,13 @@ else:
                         ("환기 접속관 (RA) 사이즈", f"{selected_row['Conn_RA']} mm"),
                         ("공급팬 (SF) 규격 사이즈", f"{selected_row['SF_Fan_Size']}"),
                         ("공급팬 모터 사양 및 최종 전정압", f"{selected_row['SF_Motor_kW']} kW (TSP {total_static_pressure} mmAq 기준)"), 
-                        ("코일 패스 및 수량", f"{int(selected_row['Coil_Pass'])} Pass / {int(selected_row['Coil_Qty'])} 개"),
+                        ("코일 패스 및 수량", f"{int(selected_row['Coil_Pass'])} Pass / {int(selected_row['Coil_Qty'])} EA"),
                         ("코일 규격 크기 (H × W)", f"{int(selected_row['Coil_H'])} mm × {int(selected_row['Coil_W'])} mm"),
                         ("정면 면적 (Face Area)", f"{face_area} m²"),
                         ("코일 면풍속 (Coil Face Velocity)", f"{coil_velocity} m/s"),
-                        ("전처리 프리 필터 (Pre-Filter)", f"장착 완료 ({f_row}단 × {f_col}열)" if v_opt_pre else "미장착 (옵션제외)"),
-                        ("중성능 미디움 필터 (Medium Filter)", f"장착 완료 ({f_row}단 × {f_col}열)" if v_opt_med else "미장착 (옵션제외)"),
-                        ("고성능 헤파 필터 (HEPA Filter)", f"장착 완료 ({f_row}단 × {f_col}열)" if v_opt_hepa else "미장착 (옵션제외)"),
+                        ("전처리 프리 필터 (Pre-Filter)", f"장착 완료 ({f_row} Row × {f_col} Col)" if v_opt_pre else "미장착 (옵션제외)"),
+                        ("중성능 미디움 필터 (Medium Filter)", f"장착 완료 ({f_row} Row × {f_col} Col)" if v_opt_med else "미장착 (옵션제외)"),
+                        ("고성능 헤파 필터 (HEPA Filter)", f"장착 완료 ({f_row} Row × {f_col} Col)" if v_opt_hepa else "미장착 (옵션제외)"),
                         ("냉온수 배관 관경", f"{int(selected_row['Conn_Cool_In_Out_A'])} A × {int(selected_row['Conn_Cool_Qty'])} EA")
                     ]
                 else:
@@ -760,8 +763,10 @@ else:
                     'location': curr_location, 'density': v_rho, 'corr_cool': corr_cool_req, 'corr_heat': corr_heat_req,
                     'c_temp': v_ct, 'c_rh': v_cr, 'h_temp': v_ht, 'h_rh': v_hr
                 }
+                
+                # 🌟 [글자 겹침 원천 차단]: ISP/ESP 텍스트 분리 및 간소화
                 pdf_coil_info = {
-                    'cool_type': f"{v_cool_source.split(' (')[0]} (ISP: {calculated_internal_static} / ESP: {curr_ext_static} / TSP: {total_static_pressure} mmAq)", 
+                    'cool_type': cool_type_label, 
                     'h_tw1': v_ch_tw1, 'h_tw2': v_ch_tw2,
                     'cool_fluid_status': cool_lpm_str, 'heat_lpm': heat_lpm, 'cool_lmtd': cool_lmtd_str, 'water_velocity': water_velocity_str
                 }
@@ -770,6 +775,7 @@ else:
                 
                 with col_m2:
                     st.write("") 
+                    # 🌟 버튼명 심플화
                     st.download_button(
                         label="📄 PDF 출력",
                         data=pdf_bytes,
