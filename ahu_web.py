@@ -6,6 +6,7 @@ from fpdf import FPDF
 from datetime import datetime
 import base64
 import math
+import matplotlib.pyplot as plt
 
 # 웹페이지 기본 설정
 st.set_page_config(
@@ -113,7 +114,7 @@ def calculate_absolute_humidity(db_temp, rh):
     x = 0.62194 * pw / (std_pressure - pw)
     return x
 
-# 습공기 상태방정식 기반 실시간 공기 밀도 연산 함수
+# 공기 밀도 산출 함수
 def calculate_air_density(db_temp, rh):
     abs_temp = db_temp + 273.15 
     std_pressure = 101325 
@@ -132,17 +133,73 @@ def calculate_air_density(db_temp, rh):
         
     pw = ps * (rh / 100.0)
     p_da = std_pressure - pw
-    
     r_da = 287.055 
     r_wv = 461.5 
     
     density = (p_da / (r_da * abs_temp)) + (pw / (r_wv * abs_temp))
     return round(density, 4)
 
+# 엔탈피(kJ/kg) 산출 함수
+def calculate_enthalpy(db_temp, abs_humidity):
+    return round(1.006 * db_temp + abs_humidity * (2501.0 + 1.86 * db_temp), 2)
+
+# 스털(Stull) 공식 기반 습구온도(°C) 근사 산출 함수
+def calculate_wet_bulb(T, RH):
+    try:
+        wb = T * math.atan(0.151977 * math.pow(RH + 8.313659, 0.5)) + math.atan(T + RH) - math.atan(RH - 1.676331) + 0.00391838 * math.pow(RH, 1.5) * math.atan(0.023101 * RH) - 4.686035
+        return round(wb, 1)
+    except:
+        return T
+
+# 🌟 [그래픽 엔진]: 공기선도 매핑 및 말풍선 생성 함수
+def generate_psychrometric_chart(t1, rh1, t2, rh2, is_dx=False):
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # 포화 곡선 (100% RH) 그리기
+    T_curve = range(-10, 45)
+    x_curve = [calculate_absolute_humidity(t, 100) for t in T_curve]
+    ax.plot(T_curve, x_curve, 'k-', linewidth=1.5, label="Saturation Line (100% RH)")
+    
+    # 상대습도 가이드 라인 (50% RH)
+    x_50 = [calculate_absolute_humidity(t, 50) for t in T_curve]
+    ax.plot(T_curve, x_50, 'k--', linewidth=0.8, alpha=0.5, label="50% RH")
+
+    # Point 1 (Inlet) 계산
+    x1 = calculate_absolute_humidity(t1, rh1)
+    h1 = calculate_enthalpy(t1, x1)
+    wb1 = calculate_wet_bulb(t1, rh1)
+
+    # Point 2 (Outlet) 계산 (DX코일이 아니면 목표 냉방 15도/95% 가정)
+    x2 = calculate_absolute_humidity(t2, rh2)
+    h2 = calculate_enthalpy(t2, x2)
+    wb2 = calculate_wet_bulb(t2, rh2)
+
+    # 점 찍기 및 화살표 연결 (냉방 프로세스)
+    ax.plot(t1, x1, 'ro', markersize=8)
+    ax.plot(t2, x2, 'bo', markersize=8)
+    ax.annotate('', xy=(t2, x2), xytext=(t1, x1), arrowprops=dict(arrowstyle="->", color='gray', lw=2))
+
+    # 말풍선 (Callout) 디자인
+    bbox_props1 = dict(boxstyle="round,pad=0.5", fc="#ffe6e6", ec="red", lw=1.5, alpha=0.9)
+    ax.text(t1, x1 + 0.0015, f"INLET (Point 1)\nDB: {t1} C\nWB: {wb1} C\nAH: {round(x1, 4)} kg/kg'\nEnt: {h1} kJ/kg", ha="center", va="bottom", bbox=bbox_props1, fontsize=9, fontweight='bold')
+
+    bbox_props2 = dict(boxstyle="round,pad=0.5", fc="#e6f2ff", ec="blue", lw=1.5, alpha=0.9)
+    ax.text(t2, x2 - 0.0015, f"OUTLET (Point 2)\nDB: {t2} C\nWB: {wb2} C\nAH: {round(x2, 4)} kg/kg'\nEnt: {h2} kJ/kg", ha="center", va="top", bbox=bbox_props2, fontsize=9, fontweight='bold')
+
+    ax.set_xlim(-5, 45)
+    ax.set_ylim(0, 0.035)
+    ax.set_xlabel("Dry Bulb Temperature (C)", fontweight='bold')
+    ax.set_ylabel("Absolute Humidity (kg/kg')", fontweight='bold')
+    ax.set_title("RootAir Psychrometric Process Analysis", fontweight='bold', fontsize=14)
+    ax.grid(True, linestyle=':', alpha=0.6)
+    ax.legend(loc="upper left")
+    
+    plt.tight_layout()
+    fig.savefig("psychro_chart.png", dpi=200)
+    plt.close(fig)
+
 if df is None:
     st.error("❌ 데이터베이스(CSV) 파일을 찾을 수 없습니다.")
-elif 'Type_H_HI' not in df.columns:
-    st.error("❌ [알림] 인터넷 서버가 아직 구버전 CSV 파일의 기억을 붙잡고 있습니다. [Clear cache]를 진행해 주세요.")
 else:
     # 상단 로고 바 렌더링
     left_logo_html = ""
@@ -167,7 +224,6 @@ else:
     st.caption(f"📊 Connected Database: {os.path.basename(db_filename)}")
     st.write("---")
 
-    # PDF 푸터 설정 클래스
     class RootAirPDF(FPDF):
         def footer(self):
             self.set_y(-12)
@@ -179,7 +235,7 @@ else:
             footer_text = "Copyright © RootAir ALL RIGHTS RESERVED. | Tel: +82-02-2082-7654 | Email: rootair@rootair.co.kr"
             self.cell(190, 8, txt=footer_text, border=0, ln=False, align="C")
 
-    # PDF 생성 함수
+    # PDF 생성 함수 (2페이지 자동 확장 🌟)
     def generate_pdf(model_name, specs_list, input_conditions, project_info, density_info, coil_calc_info, is_velocity_warning):
         pdf = RootAirPDF()
         pdf.add_page()
@@ -225,7 +281,6 @@ else:
             pdf.cell(165, 4.8, txt=f" {project_info['date']}", border=1, ln=True)
         pdf.ln(2)
         
-        # [1] 설계 입력 조건 테이블 (가로 폭 조정으로 글자 겹침 해결)
         pdf.set_font("Malgun" if has_korean else "helvetica", style="" if has_korean else "B", size=9.5)
         pdf.set_text_color(15, 23, 42)
         pdf.cell(190, 5.0, txt="[1] 설계 입력 조건 및 공기 밀도 보정 (Design Input & Density)", ln=True, align="L")
@@ -252,7 +307,6 @@ else:
         pdf.cell(47, 4.2, txt=f" {density_info['density']} kg/m3", border=1, ln=True)
         pdf.ln(2)
         
-        # [2] 코일 열정격 사양 테이블 (셀 폭을 45:50에서 52:43으로 조정하여 영문명과 데이터 겹침 완벽 방지)
         pdf.set_font("Malgun" if has_korean else "helvetica", style="" if has_korean else "B", size=9.5)
         pdf.cell(190, 5.0, txt="[2] 코일 열정격 및 옵션 사양 (Coil & Option Mechanical Data)", ln=True, align="L")
         pdf.set_font("Malgun" if has_korean else "helvetica", size=8.0)
@@ -273,7 +327,6 @@ else:
         pdf.cell(43, 4.2, txt=f" {coil_calc_info['water_velocity']}", border=1, ln=True)
         pdf.ln(2)
         
-        # [3] 기술 규격 명세 테이블
         pdf.set_font("Malgun" if has_korean else "helvetica", style="" if has_korean else "B", size=10)
         pdf.cell(190, 5.5, txt=f"[3] 추천 모델 상세 기술 규격 명세: {model_name}", ln=True, align="L")
         pdf.set_font("Malgun" if has_korean else "helvetica", size=7.3) 
@@ -300,6 +353,29 @@ else:
             pdf.cell(190, 3.8, txt="⚠️ 코일 면풍속이 2.5 m/s를 초과하여 응축수 비산 위험이 있습니다.", border=0, ln=True, align="L")
             pdf.ln(0.5)
 
+        # 🌟 2페이지 추가 로직: 공기선도 프로세스 분석 (Psychrometric Process)
+        pdf.add_page()
+        
+        if os.path.exists("company_logo.png"):
+            pdf.image("company_logo.png", x=10, y=6, w=22)
+        if os.path.exists("ahri_logo.png"):
+            pdf.image("ahri_logo.png", x=175, y=6, w=22)
+        pdf.set_y(15)
+        
+        pdf.set_font("Malgun" if has_korean else "helvetica", style="" if has_korean else "B", size=14)
+        pdf.set_text_color(15, 23, 42)
+        pdf.cell(190, 8, txt="[4] 공기선도 프로세스 시뮬레이션 (Psychrometric Process)", ln=True, align="L")
+        pdf.ln(2)
+        
+        pdf.set_font("Malgun" if has_korean else "helvetica", style="", size=9)
+        pdf.set_text_color(51, 65, 85)
+        pdf.cell(190, 5, txt="* 코일 통과 전/후의 공기 상태(건구온도, 습구온도, 절대습도, 엔탈피) 물리적 변화를 나타냅니다.", ln=True, align="L")
+        pdf.ln(5)
+        
+        if os.path.exists("psychro_chart.png"):
+            pdf.image("psychro_chart.png", x=15, y=40, w=180)
+            
+        pdf.set_y(-15)
         pdf.set_font("Malgun", style="", size=6.8)
         pdf.set_text_color(148, 163, 184)
         pdf.cell(190, 3.2, txt="* 본 성적서는 루트에어 공기선도_RootAirChart v1.1 및 Flaktkorea 코일전열 공식을 통합 연동한 정밀 설계 문서입니다.", ln=True, align="C")
@@ -403,7 +479,6 @@ else:
         st.subheader("3. 최적 모델 선정 결과 (Output)")
         st.write("")
 
-        # 안전 격리 세션 변수 바인딩
         v_target_rh = st.session_state.get('target_rh', 50)
         v_opt_humid = st.session_state.get('opt_humid', "장착 안 함 (None)")
         v_added_stat = st.session_state.get('added_stat', 0.0)
@@ -525,11 +600,22 @@ else:
                     db_pass = float(selected_row['Coil_Pass']) if 'Coil_Pass' in selected_row else 18.0
                     water_velocity_str = f"{round((cool_lpm_val / 60000.0) / (db_pass * math.pi * (0.0127**2) / 4.0), 2)} m/s (안정)"
                     cool_type_label = "냉수 코일"
+                    
+                    # 🌟 2페이지 공기선도 프로세스를 위한 출구 온도(t2) 추정 (냉수)
+                    outlet_temp_for_chart = 15.0
+                    outlet_rh_for_chart = 95.0
                 else:
                     cool_lpm_str = "N/A"
                     cool_lmtd_str = "N/A"
                     water_velocity_str = "N/A"
                     cool_type_label = f"DX 코일({v_dx_evap}C)"
+                    
+                    # 🌟 2페이지 공기선도 프로세스를 위한 출구 온도(t2) 추정 (DX)
+                    outlet_temp_for_chart = 13.0
+                    outlet_rh_for_chart = 90.0
+                
+                # 🌟 [공기선도 이미지 백그라운드 자동 생성 트리거]
+                generate_psychrometric_chart(v_ct, v_cr, outlet_temp_for_chart, outlet_rh_for_chart)
                 
                 face_area = float(selected_row['Face_Area_m2'])
                 coil_velocity = round(curr_cmh / (3600.0 * face_area), 2)
@@ -604,7 +690,7 @@ else:
                     'c_temp': v_ct, 'c_rh': v_cr, 'h_temp': v_ht, 'h_rh': v_hr
                 }
                 pdf_coil_info = {
-                    'cool_type': cool_type_label, 
+                    'cool_type': f"{v_cool_source} (ISP: {calculated_internal_static} / ESP: {curr_ext_static} / TSP: {total_static_pressure} mmAq)", 
                     'h_tw1': v_ch_tw1, 'h_tw2': v_ch_tw2,
                     'cool_fluid_status': cool_lpm_str, 'heat_lpm': heat_lpm, 'cool_lmtd': cool_lmtd_str, 'water_velocity': water_velocity_str
                 }
@@ -613,11 +699,10 @@ else:
                 
                 with col_m2:
                     st.write("") 
-                    # 🌟 사용자 요청에 따른 단순 명료한 'PDF 출력' 버튼 텍스트 수정 적용
                     st.download_button(
                         label="📄 PDF 출력",
                         data=pdf_bytes,
-                        file_name=f"루트에어_풀스펙_종합정압보정_{c_name}_{selected_row['Model_Name']}.pdf",
+                        file_name=f"루트에어_공기선도_시뮬레이션_{c_name}_{selected_row['Model_Name']}.pdf",
                         mime="application/pdf"
                     )
 
