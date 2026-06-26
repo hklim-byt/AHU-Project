@@ -108,10 +108,13 @@ def calculate_absolute_humidity(db_temp, rh):
         ps = 611.2 * math.exp((17.62 * db_temp) / (db_temp + 243.12))
         
     pw = ps * (rh / 100.0)
+    p_da = std_pressure - pw
     
-    if (std_pressure - pw) <= 0: return 0.001
-    x = 0.62194 * pw / (std_pressure - pw)
-    return x
+    r_da = 287.055 
+    r_wv = 461.5 
+    
+    density = (p_da / (r_da * abs_temp)) + (pw / (r_wv * abs_temp))
+    return round(density, 4)
 
 # 습공기 상태방정식 기반 실시간 공기 밀도 연산 함수
 def calculate_air_density(db_temp, rh):
@@ -179,7 +182,7 @@ else:
             footer_text = "Copyright © RootAir ALL RIGHTS RESERVED. | Tel: +82-02-2082-7654 | Email: rootair@rootair.co.kr"
             self.cell(190, 8, txt=footer_text, border=0, ln=False, align="C")
 
-    # PDF 생성 함수 (풀옵션 탑재 대응 행 높이 4.0mm 초압축 최적화 🌟)
+    # PDF 생성 함수
     def generate_pdf(model_name, specs_list, input_conditions, project_info, density_info, coil_calc_info, is_velocity_warning):
         pdf = RootAirPDF()
         pdf.add_page()
@@ -271,8 +274,8 @@ else:
         pdf.cell(50, 4.2, txt=f" {coil_calc_info['water_velocity']}", border=1, ln=True)
         pdf.ln(2)
         
-        pdf.set_font("Malgun" if has_korean else "helvetica", style="" if has_korean else "B", size=9.5)
-        pdf.cell(190, 5.0, txt=f"[3] 추천 모델 상세 기술 규격 명세: {model_name}", ln=True, align="L")
+        pdf.set_font("Malgun" if has_korean else "helvetica", style="" if has_korean else "B", size=10)
+        pdf.cell(190, 5.5, txt=f"[3] 추천 모델 상세 기술 규격 명세: {model_name}", ln=True, align="L")
         pdf.set_font("Malgun" if has_korean else "helvetica", size=7.5)
             
         pdf.set_fill_color(241, 245, 249)
@@ -347,36 +350,34 @@ else:
             avg_calculated_rho = round((rho_cool + rho_heat) / 2.0, 4)
             st.metric(label="📊 통합 계산된 현장 평균 공기 밀도", value=f"{avg_calculated_rho} kg/m³")
 
-        # 🌟 [DX 코일 확장]: 냉방 코일 열원 종류 선택 분기 인터페이스 구축 [cite: 7]
         with st.expander("💧 코일 열원 및 운전 온도 설계 조건", expanded=True):
-            cool_source_type = st.radio("냉방 코일 종류 선택", ["냉수 코일 (Chilled Water)", "DX 코일 (Direct Expansion Direct)"]) [cite: 7, 23]
+            cool_source_type = st.radio("냉방 코일 종류 선택", ["냉수 코일 (Chilled Water)", "DX 코일 (Direct Expansion)"])
             
             if "냉수" in cool_source_type:
-                coil_c_tw1 = st.number_input("냉수 입구 온도 (°C)", value=7.0, step=0.5) [cite: 560]
-                coil_c_tw2 = st.number_input("냉수 출구 온도 (°C)", value=12.0, step=0.5) [cite: 560]
+                coil_c_tw1 = st.number_input("냉수 입구 온도 (°C)", value=7.0, step=0.5)
+                coil_c_tw2 = st.number_input("냉수 출구 온도 (°C)", value=12.0, step=0.5)
                 dx_evap_temp = 5.0
             else:
-                # DX 코일 선택 시 냉매 증발 온도 활성화 
-                dx_evap_temp = st.number_input("냉매 증발 온도 (Evaporating Temp, °C)", value=5.0, step=0.5, min_value=0.0, max_value=15.0) [cite: 50]
+                dx_evap_temp = st.number_input("냉매 증발 온도 (Evaporating Temp, °C)", value=5.0, step=0.5, min_value=0.0, max_value=15.0)
                 coil_c_tw1, coil_c_tw2 = 0.0, 0.0
                 
-            coil_h_tw1 = st.number_input("온수 입구 온도 (°C)", value=60.0, step=0.5) [cite: 562]
-            coil_h_tw2 = st.number_input("온수 출구 온도 (°C)", value=50.0, step=0.5) [cite: 562]
+            coil_h_tw1 = st.number_input("온수 입구 온도 (°C)", value=60.0, step=0.5)
+            coil_h_tw2 = st.number_input("온수 출구 온도 (°C)", value=50.0, step=0.5)
 
         with st.expander("➕ AHU 구성 부속품 및 필터 사양 선택 (정압 보정 연동)", expanded=True):
-            opt_pre_filter = st.checkbox("🔍 프리 필터 장착 (Pre-Filter, AFI 82%급)", value=True) [cite: 536, 594]
-            opt_med_filter = st.checkbox("🔍 미디움 필터 장착 (Medium Filter, NBS 90%급)", value=False) [cite: 537, 594]
-            opt_hepa_filter = st.checkbox("🔍 헤파 필터 장착 (HEPA Filter, 크린룸용 99.97%급)", value=False) [cite: 594]
+            opt_pre_filter = st.checkbox("🔍 프리 필터 장착 (Pre-Filter, AFI 82%급)", value=True)
+            opt_med_filter = st.checkbox("🔍 미디움 필터 장착 (Medium Filter, NBS 90%급)", value=False)
+            opt_hepa_filter = st.checkbox("🔍 헤파 필터 장착 (HEPA Filter, 크린룸용 99.97%급)", value=False)
             st.markdown("---")
             
             opt_antifreeze = st.checkbox("❄️ 동파방지 예열 코일 장비 내장 (Pre-Heater)", value=False)
-            opt_humidifier = st.selectbox("💨 가습기 종류 선택 (Humidifier Type)", ["장착 안 함 (None)", "기화식 가습기 (Evaporative)", "전극봉식 가습기 (Electronic)", "증기 분무식 가습기 (Steam)"]) [cite: 644]
+            opt_humidifier = st.selectbox("💨 가습기 종류 선택 (Humidifier Type)", ["장착 안 함 (None)", "기화식 가습기 (Evaporative)", "전극봉식 가습기 (Electronic)", "증기 분무식 가습기 (Steam)"])
             
             target_indoor_rh = 50
             if opt_humidifier != "장착 안 함 (None)":
                 target_indoor_rh = st.slider(" 겨울철 실내 목표 상대습도 설정 (%)", value=50, min_value=20, max_value=80, step=5)
                 
-            opt_eliminator = st.checkbox("💧 엘리미네이터 강제 장착 (Eliminator)", value=False) [cite: 588]
+            opt_eliminator = st.checkbox("💧 엘리미네이터 강제 장착 (Eliminator)", value=False)
             
             added_static = 0.0
             if opt_pre_filter: added_static += 2.0  
@@ -386,12 +387,12 @@ else:
             if opt_humidifier != "장착 안 함 (None)": added_static += 1.5 
             if opt_eliminator: added_static += 2.5 
             
-        cool_req = st.number_input("요구 냉방부하 (kcal/h)", value=35000, step=1000) [cite: 586]
-        heat_req = st.number_input("요구 난방부하 (kcal/h)", value=25000, step=1000) [cite: 586]
-        heat_type = st.radio("난방 코일 열원 종류", ["온수 (Water)", "증기 (Steam)"]) [cite: 586]
+        cool_req = st.number_input("요구 냉방부하 (kcal/h)", value=35000, step=1000)
+        heat_req = st.number_input("요구 난방부하 (kcal/h)", value=25000, step=1000)
+        heat_type = st.radio("난방 코일 열원 종류", ["온수 (Water)", "증기 (Steam)"])
 
         heat_col = 'Heating_Water_kcal_h' if "온수" in heat_type else 'Heating_Steam_kcal_h'
-        heat_label = "온수" if "온수" in heat_type else "증기" [cite: 586]
+        heat_label = "온수" if "온수" in heat_type else "증기"
 
         st.write("")
         submit_btn = st.button("🔍 최적 장비 선정하기")
@@ -400,7 +401,7 @@ else:
         st.subheader("3. 최적 모델 선정 결과 (Output)")
         st.write("")
 
-        # 변수 안전벨트 초기화부 (세션 에러 방지)
+        # 안전 변수 로컬 격리 및 초기화부
         v_target_rh = st.session_state.get('target_rh', 50)
         v_opt_humid = st.session_state.get('opt_humid', "장착 안 함 (None)")
         v_added_stat = st.session_state.get('added_stat', 0.0)
@@ -491,16 +492,16 @@ else:
             status_msg = "✅ 기상 조건, 코일 열정격 사양 및 필터 정압 보정이 완벽히 반영된 최적 모델이 매칭되었습니다."
             status_type = "success"
 
-            # 🌟 [들여쓰기 문법 오류 완벽 수정부]: 파이썬 들여쓰기 라인을 자로 잰 듯 깨끗하게 재정렬
-            for _, row in candidates.iterrows():
-                if row['Cooling_kcal_h'] >= corr_cool_req and row[heat_col] >= corr_heat_req: [cite: 556]
+            # 🌟 [들여쓰기 완전 교정]: 로직 구조 한 줄 한 줄을 완벽하게 맞춤 정렬
+            for idx_row, row in candidates.iterrows():
+                if row['Cooling_kcal_h'] >= corr_cool_req and row[heat_col] >= corr_heat_req:
                     selected_row = row
                     break
 
             if selected_row is None:
                 all_larger = type_filtered_df[type_filtered_df['Range_CMH_Max'] >= curr_cmh]
-                for _, row in all_larger.iterrows():
-                    if row['Cooling_kcal_h'] >= corr_cool_req and row[heat_col] >= corr_heat_req: [cite: 556]
+                for idx_row, row in all_larger.iterrows():
+                    if row['Cooling_kcal_h'] >= corr_cool_req and row[heat_col] >= corr_heat_req:
                         selected_row = row
                         status_msg = "⚠️ 알림: 추가 옵션 저항 가산 및 안전 가습 능력 충족을 위해 한 단계 상위 모델이 선정되었습니다."
                         status_type = "warning"
@@ -509,24 +510,24 @@ else:
             if selected_row is not None:
                 st.info(f"📋 **Project:** {c_name} | 👤 **Author:** {c_author} | 📅 **Date:** {c_date} | 📍 **Location:** {curr_location.split(' ')[0]}")
                 
-                # 🌟 [DX 코일 분기 수식 조건 제어]: DX 코일 선택 시 유량 및 수속 연산은 바이패스 처리 
-                dt_heat = max(0.1, abs(v_ch_tw1 - v_ch_tw2)) [cite: 562]
-                heat_lpm = round(corr_heat_req / (60.0 * dt_heat * 1.0), 1) [cite: 606]
+                dt_heat = max(0.1, abs(v_ch_tw1 - v_ch_tw2))
+                heat_lpm = round(corr_heat_req / (60.0 * dt_heat * 1.0), 1)
                 
                 if "냉수" in v_cool_source:
-                    dt_cool = max(0.1, abs(v_cc_tw2 - v_cc_tw1)) [cite: 560]
-                    cool_lpm_str = f"{round(corr_cool_req / (60.0 * dt_cool * 1.0), 1)} LPM" [cite: 602]
-                    cool_lmtd_str = f"{round(((v_ct - v_cc_tw2) - (15.0 - v_cc_tw1)) / math.log(max(1.01, (v_ct - v_cc_tw2)) / max(1.0, (15.0 - v_cc_tw1))), 1)} C" [cite: 602]
-                    db_pass = float(selected_row['Coil_Pass']) if 'Coil_Pass' in selected_row else 18.0 [cite: 556]
-                    water_velocity_str = f"{round((float(corr_cool_req / (60.0 * dt_cool * 1.0)) / 60000.0) / (db_pass * math.pi * (0.0127**2) / 4.0), 2)} m/s" [cite: 602]
+                    dt_cool = max(0.1, abs(v_cc_tw2 - v_cc_tw1))
+                    cool_lpm_str = f"{round(corr_cool_req / (60.0 * dt_cool * 1.0), 1)} LPM"
+                    cool_lmtd_str = f"{round(((v_ct - v_cc_tw2) - (15.0 - v_cc_tw1)) / math.log(max(1.01, (v_ct - v_cc_tw2)) / max(1.0, (15.0 - v_cc_tw1))), 1)} C"
+                    db_pass = float(selected_row['Coil_Pass']) if 'Coil_Pass' in selected_row else 18.0
+                    water_velocity_str = f"{round((float(corr_cool_req / (60.0 * dt_cool * 1.0)) / 60000.0) / (db_pass * math.pi * (0.0127**2) / 4.0), 2)} m/s"
+                    cool_type_label = "냉수 코일 (Chilled Water Loop)"
                 else:
-                    # DX 코일일 때 출력 텍스트 기믹 변경 🌟 
-                    cool_lpm_str = "N/A (직팽식 냉매 루프)"
-                    cool_lmtd_str = "N/A (냉매 증발 온도 기준)"
-                    water_velocity_str = "N/A (냉매 배관 관경 규격 적용)"
+                    cool_lpm_str = f"N/A (직팽식 냉매 증발 온도: {v_dx_evap} C)"
+                    cool_lmtd_str = "N/A (DX 냉매 직접 교환)"
+                    water_velocity_str = "N/A (냉매 순환)"
+                    cool_type_label = f"DX 직팽식 코일 (냉매 증발: {v_dx_evap} C)"
                 
-                face_area = float(selected_row['Face_Area_m2']) [cite: 556]
-                coil_velocity = round(curr_cmh / (3600.0 * face_area), 2) [cite: 602]
+                face_area = float(selected_row['Face_Area_m2'])
+                coil_velocity = round(curr_cmh / (3600.0 * face_area), 2)
                 
                 if coil_velocity >= 2.0 and not v_opt_elim:
                     v_opt_elim = True
@@ -534,8 +535,8 @@ else:
                     
                 is_velocity_warning = coil_velocity >= 2.5
 
-                if v_opt_humid != "장착 안 함 (None)": [cite: 588]
-                    x_outdoor = calculate_absolute_humidity(v_ht, v_hr) [cite: 586]
+                if v_opt_humid != "장착 안 함 (None)":
+                    x_outdoor = calculate_absolute_humidity(v_ht, v_hr)
                     x_indoor = calculate_absolute_humidity(22.0, v_target_rh)
                     delta_x = max(0.0001, x_indoor - x_outdoor)
                     required_humid_kg_h = round(curr_cmh * v_rho * delta_x, 1)
@@ -547,46 +548,55 @@ else:
                 else:
                     st.success(status_msg)
 
-                st.warning(f"  ❄️ **가습 엔진 상태:** {required_humid_kg_h} kg/h | ❄️ **냉방 열원 형태:** {v_cool_source} | 🔥 **온수량:** {heat_lpm} LPM | 🌊 **코일 면풍속:** {coil_velocity} m/s")
+                st.warning(f"  ❄️ **가습 가동 성능:** {required_humid_kg_h} kg/h | ❄️ **선택 냉방 열원:** {cool_type_label} | 🔥 **온수량:** {heat_lpm} LPM | 🌊 **코일 면풍속:** {coil_velocity} m/s")
 
                 col_m1, col_m2 = st.columns([1, 1])
                 with col_m1:
                     st.metric(label="✨ 추천 모델명", value=selected_row['Model_Name'])
                 
-                final_fan_static = int(selected_row['SF_Static_mmAq']) + int(v_added_stat) [cite: 556]
+                final_fan_static = int(selected_row['SF_Static_mmAq']) + int(v_added_stat)
+                f_row, f_col = selected_row['Filter_Row'], selected_row['Filter_Col']
                 
+                # 🌟 [사양 명세 리스트]: 괄호 및 콤마 완벽 복구 매핑
                 specs_list = [
-                    ("표준 정격 풍량", f"{int(selected_row['STD_CMH']):,} CMH ({int(selected_row['Std_CMM'])} CMM)"), [cite: 556]
-                    ("적정 풍량 범위", f"{int(selected_row['Range_CMH_Min']):,} ~ {int(selected_row['Range_CMH_Max']):,} CMH"), [cite: 556]
-                    ("선택 냉방 열원 종류", f"{v_cool_source}"),
-                    ("정격 냉방능력", f"{int(selected_row['Cooling_kcal_h']):,} kcal/h"), [cite: 556]
-                    (f"정격 난방능력 ({heat_label})", f"{int(selected_row[heat_col]):,} kcal/h"), [cite: 556]
-                    ("동파방지 예열코일 (Pre-Heater)", "장착 완료 (카탈로그 2-Row 규격 자동 매칭)" if v_opt_anti else "미장착 (None)"), [cite: 606]
-                    ("가습 장치 종류 (Humidifier)", f"{v_opt_humid}"), [cite: 588]
+                    ("표준 정격 풍량", f"{int(selected_row['STD_CMH']):,} CMH ({int(selected_row['Std_CMM'])} CMM)"),
+                    ("적정 풍량 범위", f"{int(selected_row['Range_CMH_Min']):,} ~ {int(selected_row['Range_CMH_Max']):,} CMH"),
+                    ("선택 냉방 열원 종류", f"{cool_type_label}"),
+                    ("정격 냉방능력", f"{int(selected_row['Cooling_kcal_h']):,} kcal/h"),
+                    (f"정격 난방능력 ({heat_label})", f"{int(selected_row[heat_col]):,} kcal/h"),
+                    ("동파방지 예열코일 (Pre-Heater)", "장착 완료 (카탈로그 2-Row 규격 자동 매칭)" if v_opt_anti else "미장착 (None)"),
+                    ("가습 장치 종류 (Humidifier)", f"{v_opt_humid}"),
                     ("★ 현장 요구 가습량 (Required)", f"{required_humid_kg_h} kg/h (실시간 부하 역산 값)"), 
-                    ("장비 정격 가습량 (Actual)", f"{int(selected_row['Humid_kg_h'])} kg/h (루트에어 마스터 규격 스펙)"), [cite: 556]
-                    ("엘리미네이터 (Eliminator)", "장착 완료 (응축수 비산방지 프로텍터)" if v_opt_elim else "미장착"), [cite: 588]
-                    ("장비 외형 규격 크기 (W × H × L)", f"{int(selected_row['Size_W']):,} × {int(selected_row['Size_H']):,} × {int(selected_row['Size_L']):,} mm"), [cite: 571]
-                    ("급기 접속관 (SA) 사이즈", f"{selected_row['Conn_SA']} mm"), [cite: 571]
-                    ("외기 접속관 (OA) 사이즈", f"{selected_row['Conn_OA']} mm"), [cite: 571]
-                    ("환기 접속관 (RA) 사이즈", f"{selected_row['Conn_RA']} mm"), [cite: 571]
-                    ("공급팬 (SF) 규격 사이즈", f"{selected_row['SF_Fan_Size']}"), [cite: 556]
-                    ("공급팬 모터 사양 및 실시간 정압", f"{selected_row['SF_Motor_kW']} kW (최종 보정 정압: {final_fan_static} mmAq)"), [cite: 556]
-                    ("코일 패스 및 수량", f"{int(selected_row['Coil_Pass'])} Pass / {int(selected_row['Coil_Qty'])} 개"), [cite: 556]
-                    ("코일 규격 크기 (H × W)", f"{int(selected_row['Coil_H'])} mm × {int(selected_row['Coil_W'])} mm"), [cite: 556]
-                    ("정면 면적 (Face Area)", f"{face_area} m²"), [cite: 556]
-                    ("코일 면풍속 (Coil Face Velocity)", f"{coil_velocity} m/s"), [cite: 602]
-                    ("필터 배열 구조", f"{selected_row['Filter_Row']} 단 × {selected_row['Filter_Col']} 열"), [cite: 556]
-                    ("냉온수 배관 관경", f"{int(selected_row['Conn_Cool_In_Out_A'])} A × {int(selected_row['Conn_Cool_Qty'])} 개") [cite: 556]
+                    ("장비 정격 가습량 (Actual)", f"{int(selected_row['Humid_kg_h'])} kg/h (루트에어 마스터 규격 스펙)"),
+                    ("엘리미네이터 (Eliminator)", "장착 완료 (응축수 비산방지 프로텍터)" if v_opt_elim else "미장착"),
+                    ("전처리 프리 필터 (Pre-Filter)", f"장착 완료 ({f_row}단 × {f_col}열)" if v_opt_pre else "미장착 (옵션제외)"),
+                    ("중성능 미디움 필터 (Medium Filter)", f"장착 완료 ({f_row}단 × {f_col}열)" if v_opt_med else "미장착 (옵션제외)"),
+                    ("고성능 헤파 필터 (HEPA Filter)", f"장착 완료 ({f_row}단 × {f_col}열)" if v_opt_hepa else "미장착 (옵션제외)"),
+                    ("장비 외형 규격 크기 (W × H × L)", f"{int(selected_row['Size_W']):,} × {int(selected_row['Size_H']):,} × {int(selected_row['Size_L']):,} mm"),
+                    ("급기 접속관 (SA) 사이즈", f"{selected_row['Conn_SA']} mm"),
+                    ("외기 접속관 (OA) 사이즈", f"{selected_row['Conn_OA']} mm"),
+                    ("환기 접속관 (RA) 사이즈", f"{selected_row['Conn_RA']} mm"),
+                    ("공급팬 (SF) 규격 사이즈", f"{selected_row['SF_Fan_Size']}"),
+                    ("공급팬 모터 사양 및 실시간 정압", f"{selected_row['SF_Motor_kW']} kW (최종 보정 정압: {final_fan_static} mmAq)"),
+                    ("코일 패스 및 수량", f"{int(selected_row['Coil_Pass'])} Pass / {int(selected_row['Coil_Qty'])} 개"),
+                    ("코일 규격 크기 (H × W)", f"{int(selected_row['Coil_H'])} mm × {int(selected_row['Coil_W'])} mm"),
+                    ("정면 면적 (Face Area)", f"{face_area} m²"),
+                    ("코일 면풍속 (Coil Face Velocity)", f"{coil_velocity} m/s"),
+                    ("냉온수 배관 관경", f"{int(selected_row['Conn_Cool_In_Out_A'])} A × {int(selected_row['Conn_Cool_Qty'])} 개")
                 ]
 
+                input_conditions = {
+                    'cmh': curr_cmh, 'cool': curr_cool, 'heat': curr_heat, 'heat_type': curr_type, 'ahu_type_label': curr_ahu_type
+                }
+                project_info = {'date': c_date, 'project_name': c_name, 'author': c_author}
+                
                 pdf_density_info = {
                     'location': curr_location, 'density': v_rho, 'corr_cool': corr_cool_req, 'corr_heat': corr_heat_req,
                     'c_temp': v_ct, 'c_rh': v_cr, 'h_temp': v_ht, 'h_rh': v_hr
                 }
                 pdf_coil_info = {
-                    'c_tw1': v_cc_tw1, 'c_tw2': v_cc_tw2, 'h_tw1': v_ch_tw1, 'h_tw2': v_ch_tw2,
-                    'cool_lpm': cool_lpm_str, 'heat_lpm': heat_lpm, 'cool_lmtd': cool_lmtd_str, 'water_velocity': water_velocity_str
+                    'cool_type': cool_type_label, 'h_tw1': v_ch_tw1, 'h_tw2': v_ch_tw2,
+                    'cool_fluid_status': cool_lpm_str, 'heat_lpm': heat_lpm, 'cool_lmtd': cool_lmtd_str, 'water_velocity': water_velocity_str
                 }
                 
                 pdf_bytes = generate_pdf(selected_row['Model_Name'], specs_list, input_conditions, project_info, pdf_density_info, pdf_coil_info, is_velocity_warning)
@@ -594,7 +604,7 @@ else:
                 with col_m2:
                     st.write("") 
                     st.download_button(
-                        label="📄 가습 및 필터 통합형 성적서 다운로드 (PDF)",
+                        label="📄 대통합 최종본 성적서 다운로드 (PDF)",
                         data=pdf_bytes,
                         file_name=f"루트에어_풀스펙_대통합_성적서_{c_name}_{selected_row['Model_Name']}.pdf",
                         mime="application/pdf"
@@ -607,6 +617,6 @@ else:
                 res_df = pd.DataFrame(res_data)
                 st.dataframe(res_df, use_container_width=True, hide_index=True)
             else:
-                st.error("❌ 에러: 풀스펙 필터 저항 및 공기 보정을 만족하는 공조기 사양이 마스터 데이터베이스에 존재하지 않습니다.")
+                st.error("❌ 에러: 풀스펙 필터 저항 및 DX 코일 보정을 만족하는 공조기 사양이 마스터 데이터베이스에 존재하지 않습니다.")
         else:
             st.info("💡 좌측 입력창에 정보를 입력한 후 [최적 장비 선정하기] 버튼을 누르세요.")
