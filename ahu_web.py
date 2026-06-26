@@ -225,55 +225,58 @@ else:
             pdf.cell(165, 4.8, txt=f" {project_info['date']}", border=1, ln=True)
         pdf.ln(2)
         
+        # [1] 설계 입력 조건 테이블 (가로 폭 조정으로 글자 겹침 해결)
         pdf.set_font("Malgun" if has_korean else "helvetica", style="" if has_korean else "B", size=9.5)
         pdf.set_text_color(15, 23, 42)
         pdf.cell(190, 5.0, txt="[1] 설계 입력 조건 및 공기 밀도 보정 (Design Input & Density)", ln=True, align="L")
         pdf.set_font("Malgun" if has_korean else "helvetica", size=8.0)
         
-        pdf.cell(45, 4.2, txt=" Required Air Flow:", border=1)
-        pdf.cell(50, 4.2, txt=f" {input_conditions['cmh']:,} CMH", border=1)
-        pdf.cell(45, 4.2, txt=" Unit Layout Type:", border=1)
-        pdf.cell(50, 4.2, txt=f" {input_conditions['ahu_type_label']}", border=1, ln=True)
+        pdf.cell(48, 4.2, txt=" Required Air Flow:", border=1)
+        pdf.cell(47, 4.2, txt=f" {input_conditions['cmh']:,} CMH", border=1)
+        pdf.cell(48, 4.2, txt=" Unit Layout Type:", border=1)
+        pdf.cell(47, 4.2, txt=f" {input_conditions['ahu_type_label']}", border=1, ln=True)
         
-        pdf.cell(45, 4.2, txt=" Input Cooling Load:", border=1)
-        pdf.cell(50, 4.2, txt=f" {input_conditions['cool']:,} kcal/h", border=1)
-        pdf.cell(45, 4.2, txt=" Corrected Cool Load:", border=1)
-        pdf.cell(50, 4.2, txt=f" {int(density_info['corr_cool']):,} kcal/h", border=1, ln=True)
+        pdf.cell(48, 4.2, txt=" Input Cooling Load:", border=1)
+        pdf.cell(47, 4.2, txt=f" {input_conditions['cool']:,} kcal/h", border=1)
+        pdf.cell(48, 4.2, txt=" Corrected Cool Load:", border=1)
+        pdf.cell(47, 4.2, txt=f" {int(density_info['corr_cool']):,} kcal/h", border=1, ln=True)
         
-        pdf.cell(45, 4.2, txt=" Input Heating Load:", border=1)
-        pdf.cell(50, 4.2, txt=f" {input_conditions['heat']:,} kcal/h", border=1)
-        pdf.cell(45, 4.2, txt=" Corrected Heat Load:", border=1)
-        pdf.cell(50, 4.2, txt=f" {int(density_info['corr_heat']):,} kcal/h", border=1, ln=True)
+        pdf.cell(48, 4.2, txt=" Input Heating Load:", border=1)
+        pdf.cell(47, 4.2, txt=f" {input_conditions['heat']:,} kcal/h", border=1)
+        pdf.cell(48, 4.2, txt=" Corrected Heat Load:", border=1)
+        pdf.cell(47, 4.2, txt=f" {int(density_info['corr_heat']):,} kcal/h", border=1, ln=True)
         
-        pdf.cell(45, 4.2, txt=" Project Location:", border=1)
-        pdf.cell(50, 4.2, txt=f" {density_info['location'].split(' ')[0]}", border=1)
-        pdf.cell(45, 4.2, txt=" Real Air Density:", border=1)
-        pdf.cell(50, 4.2, txt=f" {density_info['density']} kg/m3", border=1, ln=True)
+        pdf.cell(48, 4.2, txt=" Project Location:", border=1)
+        pdf.cell(47, 4.2, txt=f" {density_info['location'].split(' ')[0]}", border=1)
+        pdf.cell(48, 4.2, txt=" Real Air Density:", border=1)
+        pdf.cell(47, 4.2, txt=f" {density_info['density']} kg/m3", border=1, ln=True)
         pdf.ln(2)
         
+        # [2] 코일 열정격 사양 테이블 (셀 폭을 45:50에서 52:43으로 조정하여 영문명과 데이터 겹침 완벽 방지)
         pdf.set_font("Malgun" if has_korean else "helvetica", style="" if has_korean else "B", size=9.5)
         pdf.cell(190, 5.0, txt="[2] 코일 열정격 및 옵션 사양 (Coil & Option Mechanical Data)", ln=True, align="L")
         pdf.set_font("Malgun" if has_korean else "helvetica", size=8.0)
         
-        pdf.cell(45, 4.2, txt=" 냉방 코일 운전 종류:", border=1)
-        pdf.cell(50, 4.2, txt=f" {coil_calc_info['cool_type']}", border=1)
-        pdf.cell(45, 4.2, txt=" 온수 입/출구 온도:", border=1)
-        pdf.cell(50, 4.2, txt=f" {coil_calc_info['h_tw1']} C -> {coil_calc_info['h_tw2']} C", border=1, ln=True)
+        pdf.cell(52, 4.2, txt=" 냉방 코일 운전 종류:", border=1)
+        pdf.cell(43, 4.2, txt=f" {coil_calc_info['cool_type']}", border=1)
+        pdf.cell(52, 4.2, txt=" 온수 입/출구 온도:", border=1)
+        pdf.cell(43, 4.2, txt=f" {coil_calc_info['h_tw1']} C -> {coil_calc_info['h_tw2']} C", border=1, ln=True)
         
-        pdf.cell(45, 4.2, txt=" 냉수 유량 / 냉매 온도:", border=1)
-        pdf.cell(50, 4.2, txt=f" {coil_calc_info['cool_fluid_status']}", border=1)
-        pdf.cell(45, 4.2, txt=" 온수 요구 유량 (LPM):", border=1)
-        pdf.cell(50, 4.2, txt=f" {coil_calc_info['heat_lpm']} LPM", border=1, ln=True)
+        pdf.cell(52, 4.2, txt=" 냉수 유량 / 냉매 온도:", border=1)
+        pdf.cell(43, 4.2, txt=f" {coil_calc_info['cool_fluid_status']}", border=1)
+        pdf.cell(52, 4.2, txt=" 온수 요구 유량 (LPM):", border=1)
+        pdf.cell(43, 4.2, txt=f" {coil_calc_info['heat_lpm']} LPM", border=1, ln=True)
         
-        pdf.cell(45, 4.2, txt=" 냉방 대수평균 (LMTD):", border=1)
-        pdf.cell(50, 4.2, txt=f" {coil_calc_info['cool_lmtd']}", border=1)
-        pdf.cell(45, 4.2, txt=" 코일 관내 유속 (Water):", border=1)
-        pdf.cell(50, 4.2, txt=f" {coil_calc_info['water_velocity']}", border=1, ln=True)
+        pdf.cell(52, 4.2, txt=" 냉방 대수평균 (LMTD):", border=1)
+        pdf.cell(43, 4.2, txt=f" {coil_calc_info['cool_lmtd']}", border=1)
+        pdf.cell(52, 4.2, txt=" 코일 관내 유속 (Water):", border=1)
+        pdf.cell(43, 4.2, txt=f" {coil_calc_info['water_velocity']}", border=1, ln=True)
         pdf.ln(2)
         
+        # [3] 기술 규격 명세 테이블
         pdf.set_font("Malgun" if has_korean else "helvetica", style="" if has_korean else "B", size=10)
         pdf.cell(190, 5.5, txt=f"[3] 추천 모델 상세 기술 규격 명세: {model_name}", ln=True, align="L")
-        pdf.set_font("Malgun" if has_korean else "helvetica", size=7.3) # 🌟 4.0mm 행 맞춤형 자간 폰트 스케일링
+        pdf.set_font("Malgun" if has_korean else "helvetica", size=7.3) 
             
         pdf.set_fill_color(241, 245, 249)
         pdf.cell(75, 4.0, txt=" Specification Item", border=1, fill=True)
@@ -514,7 +517,6 @@ else:
                 dt_heat = max(0.1, abs(v_ch_tw1 - v_ch_tw2))
                 heat_lpm = round(corr_heat_req / (60.0 * dt_heat * 1.0), 1)
                 
-                # 🌟 [NameError 버그 차단 기믹]: DX 코일 선택 시 수측 연산 안전 선언 및 우회 분기
                 if "냉수" in v_cool_source:
                     dt_cool = max(0.1, abs(v_cc_tw2 - v_cc_tw1))
                     cool_lpm_val = round(corr_cool_req / (60.0 * dt_cool * 1.0), 1)
@@ -522,12 +524,12 @@ else:
                     cool_lmtd_str = f"{round(((v_ct - v_cc_tw2) - (15.0 - v_cc_tw1)) / math.log(max(1.01, (v_ct - v_cc_tw2)) / max(1.0, (15.0 - v_cc_tw1))), 1)} C"
                     db_pass = float(selected_row['Coil_Pass']) if 'Coil_Pass' in selected_row else 18.0
                     water_velocity_str = f"{round((cool_lpm_val / 60000.0) / (db_pass * math.pi * (0.0127**2) / 4.0), 2)} m/s (안정)"
-                    cool_type_label = "냉수 코일 (Chilled Water Loop)"
+                    cool_type_label = "냉수 코일"
                 else:
-                    cool_lpm_str = "N/A (직팽식 냉매 루프)"
-                    cool_lmtd_str = "N/A (DX 직접 팽창)"
-                    water_velocity_str = "N/A (냉매 배관 규격 적용)"
-                    cool_type_label = f"DX 직팽식 코일 (냉매 증발: {v_dx_evap} C)"
+                    cool_lpm_str = "N/A"
+                    cool_lmtd_str = "N/A"
+                    water_velocity_str = "N/A"
+                    cool_type_label = f"DX 코일({v_dx_evap}C)"
                 
                 face_area = float(selected_row['Face_Area_m2'])
                 coil_velocity = round(curr_cmh / (3600.0 * face_area), 2)
@@ -551,7 +553,6 @@ else:
                 else:
                     st.success(status_msg)
 
-                # 🌟 [기내정압(ISP) 및 전정압(TSP) 실시간 마스터 계산 엔진 가동]
                 calculated_internal_static = int(selected_row['SF_Static_mmAq']) + int(v_added_stat)
                 total_static_pressure = int(curr_ext_static) + calculated_internal_static
                 
@@ -574,7 +575,7 @@ else:
                     ("★ 현장 요구 가습량 (Required)", f"{required_humid_kg_h} kg/h (실시간 부하 역산 값)"), 
                     ("장비 정격 가습량 (Actual)", f"{int(selected_row['Humid_kg_h'])} kg/h (루트에어 마스터 규격 스펙)"),
                     ("엘리미네이터 (Eliminator)", "장착 완료 (응축수 비산방지 프로텍터)" if v_opt_elim else "미장착"),
-                    ("실시간 계산 기내 정압 (ISP)", f"{calculated_internal_static} mmAq (본체 + 필터 + 옵션 저항)"), # 🌟 명세표 ISP 추가
+                    ("실시간 계산 기내 정압 (ISP)", f"{calculated_internal_static} mmAq (본체 + 필터 + 옵션 저항)"), 
                     ("설계 기외 정압 (ESP)", f"{curr_ext_static} mmAq (현장 덕트 마찰 저항)"), 
                     ("합산 보정 최종 전정압 (TSP)", f"{total_static_pressure} mmAq (송풍기 정격 압력)"), 
                     ("장비 외형 규격 크기 (W × H × L)", f"{int(selected_row['Size_W']):,} × {int(selected_row['Size_H']):,} × {int(selected_row['Size_L']):,} mm"),
@@ -603,7 +604,7 @@ else:
                     'c_temp': v_ct, 'c_rh': v_cr, 'h_temp': v_ht, 'h_rh': v_hr
                 }
                 pdf_coil_info = {
-                    'cool_type': f"{v_cool_source} (ISP: {calculated_internal_static} / ESP: {curr_ext_static} / TSP: {total_static_pressure} mmAq)", 
+                    'cool_type': cool_type_label, 
                     'h_tw1': v_ch_tw1, 'h_tw2': v_ch_tw2,
                     'cool_fluid_status': cool_lpm_str, 'heat_lpm': heat_lpm, 'cool_lmtd': cool_lmtd_str, 'water_velocity': water_velocity_str
                 }
@@ -612,8 +613,9 @@ else:
                 
                 with col_m2:
                     st.write("") 
+                    # 🌟 사용자 요청에 따른 단순 명료한 'PDF 출력' 버튼 텍스트 수정 적용
                     st.download_button(
-                        label="📄 기내/기외정압 보정 성적서 다운로드 (PDF)",
+                        label="📄 PDF 출력",
                         data=pdf_bytes,
                         file_name=f"루트에어_풀스펙_종합정압보정_{c_name}_{selected_row['Model_Name']}.pdf",
                         mime="application/pdf"
