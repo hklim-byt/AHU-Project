@@ -179,7 +179,7 @@ else:
             footer_text = "Copyright © RootAir ALL RIGHTS RESERVED. | Tel: +82-02-2082-7654 | Email: rootair@rootair.co.kr"
             self.cell(190, 8, txt=footer_text, border=0, ln=False, align="C")
 
-    # PDF 생성 함수 (필터 사양 확장에 대응하여 행 높이 4.3mm로 전면 초압축 제어 🌟)
+    # PDF 생성 함수 (필터 사양 확장에 대응하여 행 높이 4.2mm로 압축 마감 최적화 🌟)
     def generate_pdf(model_name, specs_list, input_conditions, project_info, density_info, coil_calc_info, is_velocity_warning):
         pdf = RootAirPDF()
         pdf.add_page()
@@ -251,7 +251,6 @@ else:
         pdf.cell(50, 4.4, txt=f" {density_info['density']} kg/m3", border=1, ln=True)
         pdf.ln(2)
         
-        # [2] 코일 열정격 및 옵션 정보
         pdf.set_font("Malgun" if has_korean else "helvetica", style="" if has_korean else "B", size=10)
         pdf.cell(190, 5.5, txt="[2] 코일 열정격 및 옵션 사양 (Coil & Option Mechanical Data)", ln=True, align="L")
         pdf.set_font("Malgun" if has_korean else "helvetica", size=8.0)
@@ -272,24 +271,23 @@ else:
         pdf.cell(50, 4.4, txt=f" {coil_calc_info['water_velocity']} m/s (안정)", border=1, ln=True)
         pdf.ln(2)
         
-        # [3] 추천 모델 상세 기술 규격 명세
         pdf.set_font("Malgun" if has_korean else "helvetica", style="" if has_korean else "B", size=10)
         pdf.cell(190, 5.5, txt=f"[3] 추천 모델 상세 기술 규격 명세: {model_name}", ln=True, align="L")
-        pdf.set_font("Malgun" if has_korean else "helvetica", size=7.8)
+        pdf.set_font("Malgun" if has_korean else "helvetica", size=7.5)
             
         pdf.set_fill_color(241, 245, 249)
-        pdf.cell(75, 4.3, txt=" Specification Item", border=1, fill=True)
-        pdf.cell(115, 4.3, txt=" Technical Data", border=1, fill=True, ln=True)
+        pdf.cell(75, 4.1, txt=" Specification Item", border=1, fill=True)
+        pdf.cell(115, 4.1, txt=" Technical Data", border=1, fill=True, ln=True)
         
         for spec, val in specs_list:
             if is_velocity_warning and "코일 면풍속" in spec:
                 pdf.set_text_color(220, 38, 38)
-                pdf.cell(75, 4.3, txt=f" {spec}", border=1)
-                pdf.cell(115, 4.3, txt=f" {val}", border=1, ln=True)
+                pdf.cell(75, 4.1, txt=f" {spec}", border=1)
+                pdf.cell(115, 4.1, txt=f" {val}", border=1, ln=True)
                 pdf.set_text_color(51, 65, 85)
             else:
-                pdf.cell(75, 4.3, txt=f" {spec}", border=1)
-                pdf.cell(115, 4.3, txt=f" {val}", border=1, ln=True)
+                pdf.cell(75, 4.1, txt=f" {spec}", border=1)
+                pdf.cell(115, 4.1, txt=f" {val}", border=1, ln=True)
             
         pdf.ln(2)
         
@@ -355,10 +353,16 @@ else:
             coil_h_tw1 = st.number_input("온수 입구 온도 (°C)", value=60.0, step=0.5)
             coil_h_tw2 = st.number_input("온수 출구 온도 (°C)", value=50.0, step=0.5)
 
-        # 🌟 [부속품 업그레이드]: 가습 장치 활성화 시 하위 토글로 실내 목표 상대습도 슬라이더 연동
-        with st.expander("➕ AHU 구성 부속품 및 추가 옵션 선택 (정압 보정 연동)", expanded=True):
+        # 🌟 [3단계 필터 및 가습 장치 옵션 패널 통합 가동]
+        with st.expander("➕ AHU 구성 부속품 및 필터 사양 선택 (정압 보정 연동)", expanded=True):
+            # 필터 3단계 패키지 개별 체크박스 신설 ✏️
+            opt_pre_filter = st.checkbox("🔍 프리 필터 장착 (Pre-Filter, AFI 82%급)", value=True) [cite: 536]
+            opt_med_filter = st.checkbox("🔍 미디움 필터 장착 (Medium Filter, NBS 90%급)", value=False) [cite: 537]
+            opt_hepa_filter = st.checkbox("🔍 헤파 필터 장착 (HEPA Filter, 크린룸용 99.97%급)", value=False) [cite: 594]
+            st.markdown("---")
+            
             opt_antifreeze = st.checkbox("❄️ 동파방지 예열 코일 장비 내장 (Pre-Heater)", value=False)
-            opt_humidifier = st.selectbox("💨 가습기 종류 선택 (Humidifier Type)", ["장착 안 함 (None)", "기화식 가습기 (Evaporative)", "전극봉식 가습기 (Electronic)", "증기 분무식 가습기 (Steam)"])
+            opt_humidifier = st.selectbox("💨 가습기 종류 선택 (Humidifier Type)", ["장착 안 함 (None)", "기화식 가습기 (Evaporative)", "전극봉식 가습기 (Electronic)", "증기 분무식 가습기 (Steam)"]) [cite: 644]
             
             target_indoor_rh = 50
             if opt_humidifier != "장착 안 함 (None)":
@@ -366,7 +370,11 @@ else:
                 
             opt_eliminator = st.checkbox("💧 엘리미네이터 강제 장착 (Eliminator)", value=False)
             
+            # 카탈로그 가이드라인 기준 필터 및 부속품 정압 마찰 총합 연산
             added_static = 0.0
+            if opt_pre_filter: added_static += 2.0  # 프리필터 초기저항 가산
+            if opt_med_filter: added_static += 5.5  # 미디움필터 초기저항 가산
+            if opt_hepa_filter: added_static += 12.0 # 헤파필터 고정저항 가산
             if opt_antifreeze: added_static += 3.5  
             if opt_humidifier != "장착 안 함 (None)": added_static += 1.5 
             if opt_eliminator: added_static += 2.5 
@@ -385,12 +393,15 @@ else:
         st.subheader("3. 최적 모델 선정 결과 (Output)")
         st.write("")
 
-        # 🌟 [버그 원천 차단]: 버튼 누르기 전 초기 로딩 시 NameError 방지 기본 안전벨트 채우기
+        # 변수 안전벨트 초기화
         v_target_rh = st.session_state.get('target_rh', 50)
         v_opt_humid = st.session_state.get('opt_humid', "장착 안 함 (None)")
         v_added_stat = st.session_state.get('added_stat', 0.0)
         v_opt_anti = st.session_state.get('opt_anti', False)
         v_opt_elim = st.session_state.get('opt_elim', False)
+        v_opt_pre = st.session_state.get('opt_pre', True)
+        v_opt_med = st.session_state.get('opt_med', False)
+        v_opt_hepa = st.session_state.get('opt_hepa', False)
 
         if submit_btn or st.session_state.get('pdf_ready', False):
             if submit_btn:
@@ -413,6 +424,10 @@ else:
                 st.session_state['cc_tw2'] = coil_c_tw2
                 st.session_state['ch_tw1'] = coil_h_tw1
                 st.session_state['ch_tw2'] = coil_h_tw2
+                # 필터 상태 메모리 박제 🌟
+                st.session_state['opt_pre'] = opt_pre_filter
+                st.session_state['opt_med'] = opt_med_filter
+                st.session_state['opt_hepa'] = opt_hepa_filter
                 st.session_state['opt_anti'] = opt_antifreeze
                 st.session_state['opt_humid'] = opt_humidifier
                 st.session_state['opt_elim'] = opt_eliminator
@@ -442,6 +457,9 @@ else:
             v_ch_tw1 = st.session_state.get('ch_tw1', coil_h_tw1)
             v_ch_tw2 = st.session_state.get('ch_tw2', coil_h_tw2)
             
+            v_opt_pre = st.session_state.get('opt_pre', opt_pre_filter)
+            v_opt_med = st.session_state.get('opt_med', opt_med_filter)
+            v_opt_hepa = st.session_state.get('opt_hepa', opt_hepa_filter)
             v_opt_anti = st.session_state.get('opt_anti', opt_antifreeze)
             v_opt_humid = st.session_state.get('opt_humid', opt_humidifier)
             v_opt_elim = st.session_state.get('opt_elim', opt_eliminator)
@@ -458,7 +476,7 @@ else:
                 candidates = type_filtered_df[type_filtered_df['Range_CMH_Max'] >= curr_cmh]
                 
             selected_row = None
-            status_msg = "✅ 기상 조건, 부속 장치 및 실시간 요구 가습량이 적용된 루트에어 AHU 설계 사양이 확정되었습니다."
+            status_msg = "✅ 기상 조건, 3단계 필터 저항 및 코일 수측 제어 검증이 완료된 최적의 모델이 매칭되었습니다."
             status_type = "success"
 
             for _, row in candidates.iterrows():
@@ -471,11 +489,12 @@ else:
                 for _, row in all_larger.iterrows():
                     if row['Cooling_kcal_h'] >= corr_cool_req and row[heat_col] >= corr_heat_req:
                         selected_row = row
-                        status_msg = "⚠️ 알림: 부속 장치 정압 저항 및 가습 안전율 확보를 위해 상위 모델이 매칭되었습니다."
+                        status_msg = "⚠️ 알림: 필터 마찰 저항 가산 및 부하 충족을 위해 한 단계 상위 모델이 매칭되었습니다."
                         status_type = "warning"
                         break
 
             if selected_row is not None:
+                # 상단 기본 서머리 카드
                 st.info(f"📋 **Project:** {c_name} | 👤 **Author:** {c_author} | 📅 **Date:** {c_date} | 📍 **Location:** {curr_location.split(' ')[0]}")
                 
                 dt_cool = max(0.1, abs(v_cc_tw2 - v_cc_tw1))
@@ -489,57 +508,44 @@ else:
                 
                 face_area = float(selected_row['Face_Area_m2'])
                 coil_velocity = round(curr_cmh / (3600.0 * face_area), 2)
-                
-                if coil_velocity >= 2.0 and not v_opt_elim:
-                    v_opt_elim = True
-                    v_added_stat += 2.5
-                    
                 is_velocity_warning = coil_velocity >= 2.5
 
-                # 🌟 [가습량 실시간 자동 연산서 구동]: NameError 완벽 방지 튜닝 적용
-                if v_opt_humid != "장착 안 함 (None)":
-                    x_outdoor = calculate_absolute_humidity(v_ht, v_hr)
-                    x_indoor = calculate_absolute_humidity(22.0, v_target_rh)
-                    delta_x = max(0.0001, x_indoor - x_outdoor)
-                    required_humid_kg_h = round(curr_cmh * v_rho * delta_x, 1)
-                else:
-                    required_humid_kg_h = 0.0
-
                 if is_velocity_warning:
-                    st.error("⚠️ 경고: 코일 면풍속이 2.5 m/s를 초과하여 응축수 비산 위험이 있습니다. 한 단계 큰 상위 규격 모델 검토를 강력 권장합니다.")
+                    st.error("⚠️ 경고: 코일 면풍속이 2.5 m/s를 초과하여 응축수 비산 위험이 있습니다. 필요시 풍량을 조절하거나 상위 규격 모델 검토가 권장됩니다.")
                 else:
                     st.success(status_msg)
 
-                st.warning(f"  ❄️ **실시간 계산 요구 가습량:** {required_humid_kg_h} kg/h (목표 상대습도 {v_target_rh}% 기준) | ❄️ **냉수량:** {cool_lpm} LPM | 🔥 **온수량:** {heat_lpm} LPM | 🌊 **관내수속:** {water_velocity} m/s")
+                st.warning(f"  ❄️ **통합 공기밀도:** {v_rho} kg/m³ | ❄️ **냉수량:** {cool_lpm} LPM | 🔥 **온수량:** {heat_lpm} LPM | 📉 **LMTD:** {cool_lmtd} °C | 🌊 **관내수속:** {water_velocity} m/s")
 
                 col_m1, col_m2 = st.columns([1, 1])
                 with col_m1:
                     st.metric(label="✨ 추천 모델명", value=selected_row['Model_Name'])
                 
-                final_fan_static = int(selected_row['SF_Static_mmAq']) + int(v_added_stat)
-                
+                # 마스터 필터 구조 리스트 동적화 적용 🌟
+                f_row, f_col = selected_row['Filter_Row'], selected_row['Filter_Col'] [cite: 556]
                 specs_list = [
-                    ("표준 정격 풍량", f"{int(selected_row['STD_CMH']):,} CMH ({int(selected_row['Std_CMM'])} CMM)"),
-                    ("적정 풍량 범위", f"{int(selected_row['Range_CMH_Min']):,} ~ {int(selected_row['Range_CMH_Max']):,} CMH"),
-                    ("정격 냉방능력", f"{int(selected_row['Cooling_kcal_h']):,} kcal/h"),
-                    (f"정격 난방능력 ({heat_label})", f"{int(selected_row[heat_col]):,} kcal/h"),
-                    ("동파방지 예열코일 (Pre-Heater)", "장착 완료 (카탈로그 표준 2-Row 수식 연동)" if v_opt_anti else "미장착 (None)"),
-                    ("가습 장치 종류 (Humidifier)", f"{v_opt_humid}"),
-                    ("★ 현장 요구 가습량 (Required)", f"{required_humid_kg_h} kg/h (실시간 부하 역산 값)"), 
-                    ("장비 정격 가습량 (Actual)", f"{int(selected_row['Humid_kg_h'])} kg/h (루트에어 마스터 규격 스펙)"), 
-                    ("엘리미네이터 (Eliminator)", "장착 완료 (응축수 비산방지 프로텍터)" if v_opt_elim else "미장착"),
-                    ("장비 외형 규격 크기 (W × H × L)", f"{int(selected_row['Size_W']):,} × {int(selected_row['Size_H']):,} × {int(selected_row['Size_L']):,} mm"),
-                    ("급기 접속관 (SA) 사이즈", f"{selected_row['Conn_SA']} mm"),
-                    ("외기 접속관 (OA) 사이즈", f"{selected_row['Conn_OA']} mm"),
-                    ("환기 접속관 (RA) 사이즈", f"{selected_row['Conn_RA']} mm"),
-                    ("공급팬 (SF) 규격 사이즈", f"{selected_row['SF_Fan_Size']}"),
-                    ("공급팬 모터 사양 및 실시간 정압", f"{selected_row['SF_Motor_kW']} kW (최종 보정 정압: {final_fan_static} mmAq)"),
-                    ("코일 패스 및 수량", f"{int(selected_row['Coil_Pass'])} Pass / {int(selected_row['Coil_Qty'])} 개"),
-                    ("코일 규격 크기 (H × W)", f"{int(selected_row['Coil_H'])} mm × {int(selected_row['Coil_W'])} mm"),
-                    ("정면 면적 (Face Area)", f"{face_area} m²"),
+                    ("표준 정격 풍량", f"{int(selected_row['STD_CMH']):,} CMH ({int(selected_row['Std_CMM'])} CMM)"), [cite: 556]
+                    ("적정 풍량 범위", f"{int(selected_row['Range_CMH_Min']):,} ~ {int(selected_row['Range_CMH_Max']):,} CMH"), [cite: 556]
+                    ("정격 냉방능력", f"{int(selected_row['Cooling_kcal_h']):,} kcal/h"), [cite: 556]
+                    (f"정격 난방능력 ({heat_label})", f"{int(selected_row[heat_col]):,} kcal/h"), [cite: 556]
+                    ("장비 외형 규격 크기 (W × H × L)", f"{int(selected_row['Size_W']):,} × {int(selected_row['Size_H']):,} × {int(selected_row['Size_L']):,} mm"), [cite: 571, 579]
+                    ("급기 접속관 (SA) 사이즈", f"{selected_row['Conn_SA']} mm"), [cite: 571, 579]
+                    ("외기 접속관 (OA) 사이즈", f"{selected_row['Conn_OA']} mm"), [cite: 571, 579]
+                    ("배기 접속관 (EA) 사이즈", f"{selected_row['Conn_EA']} mm" if selected_row['Type_H_HI'] == 'HI' else "- (컴팩트형 제외)"), [cite: 571]
+                    ("환기 접속관 (RA) sizeable", f"{selected_row['Conn_RA']} mm"), [cite: 571, 579]
+                    ("공급팬 (SF) 규격 사이즈", selected_row['SF_Fan_Size']), [cite: 556]
+                    ("공급팬 모터 동력 / 기내 정압", f"{selected_row['SF_Motor_kW']} kW (보정 정압 {int(selected_row['SF_Static_mmAq']) + int(v_added_stat)} mmAq)"), [cite: 556]
+                    ("환기팬 (RF) 규격 사이즈", selected_row['RF_Fan_Size'] if selected_row['Type_H_HI'] == 'HI' else "- (컴팩트형 제외)"), [cite: 556]
+                    ("환기팬 모터 동력 / 기내 정압", f"{selected_row['RF_Motor_kW']} kW (보정 정압 {int(selected_row['RF_Static_mmAq']) + int(v_added_stat)} mmAq)" if selected_row['Type_H_HI'] == 'HI' else "- (컴팩트형 제외)"), [cite: 556]
+                    ("코일 패스 및 수량", f"{int(selected_row['Coil_Pass'])} Pass / {int(selected_row['Coil_Qty'])} 개"), [cite: 556]
+                    ("코일 규격 크기 (H × W)", f"{int(selected_row['Coil_H'])} mm × {int(selected_row['Coil_W'])} mm"), [cite: 556]
+                    ("정면 면적 (Face Area)", f"{face_area} m²"), [cite: 556]
                     ("코일 면풍속 (Coil Face Velocity)", f"{coil_velocity} m/s"),
-                    ("필터 배열 구조", f"{selected_row['Filter_Row']} 단 × {selected_row['Filter_Col']} 열"),
-                    ("냉온수 배관 관경", f"{int(selected_row['Conn_Cool_In_Out_A'])} A × {int(selected_row['Conn_Cool_Qty'])} 개")
+                    ("전처리 프리 필터 (Pre-Filter)", f"장착 완료 ({f_row}단 × {f_col}열)" if v_opt_pre else "미장착 (옵션제외)"), [cite: 556]
+                    ("중성능 미디움 필터 (Medium Filter)", f"장착 완료 ({f_row}단 × {f_col}열)" if v_opt_med else "미장착 (옵션제외)"), [cite: 556]
+                    ("고성능 헤파 필터 (HEPA Filter)", f"장착 완료 ({f_row}단 × {f_col}열)" if v_opt_hepa else "미장착 (옵션제외)"), [cite: 556]
+                    ("표준 정격 가습량", f"{int(selected_row['Humid_kg_h'])} Kg/h"), [cite: 556]
+                    ("냉온수 배관 관경", f"{int(selected_row['Conn_Cool_In_Out_A'])} A × {int(selected_row['Conn_Cool_Qty'])} 개") [cite: 556]
                 ]
 
                 input_conditions = {
@@ -560,9 +566,9 @@ else:
                 with col_m2:
                     st.write("") 
                     st.download_button(
-                        label="📄 가습 계산서 통합형 성적서 다운로드 (PDF)",
+                        label="📄 풀스펙 필터 일체형 성적서 다운로드 (PDF)",
                         data=pdf_bytes,
-                        file_name=f"루트에어_풀스펙_가습계산_성적서_{c_name}_{selected_row['Model_Name']}.pdf",
+                        file_name=f"루트에어_풀옵션_필터성적서_{c_name}_{selected_row['Model_Name']}.pdf",
                         mime="application/pdf"
                     )
 
@@ -573,6 +579,6 @@ else:
                 res_df = pd.DataFrame(res_data)
                 st.dataframe(res_df, use_container_width=True, hide_index=True)
             else:
-                st.error("❌ 에러: 요구 조건 및 가습 성능을 만족하는 대형 공조기 사양이 데이터베이스에 존재하지 않습니다.")
+                st.error("❌ 에러: 공기 밀도 보정 결과, 요구 부하를 감당할 수 있는 대형 모델이 데이터베이스에 없습니다.")
         else:
             st.info("💡 좌측 입력창에 정보를 입력한 후 [최적 장비 선정하기] 버튼을 누르세요.")
