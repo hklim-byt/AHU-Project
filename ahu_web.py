@@ -144,7 +144,7 @@ if df is None:
 elif 'Type_H_HI' not in df.columns:
     st.error("❌ [알림] 인터넷 서버가 아직 구버전 CSV 파일의 기억을 붙잡고 있습니다. [Clear cache]를 진행해 주세요.")
 else:
-    # 상단 로고 및 헤더 바 렌더링
+    # 상단 로고 바 렌더링
     left_logo_html = ""
     right_logo_html = ""
     if os.path.exists("company_logo.png"):
@@ -172,14 +172,14 @@ else:
         def footer(self):
             self.set_y(-12)
             try:
-                self.set_font("Malgun", style="", size=7.5)
+                self.set_font("Malgun", style="", size=7.2)
             except:
-                self.set_font("helvetica", style="", size=7.5)
+                self.set_font("helvetica", style="", size=7.2)
             self.set_text_color(148, 163, 184)
             footer_text = "Copyright © RootAir ALL RIGHTS RESERVED. | Tel: +82-02-2082-7654 | Email: rootair@rootair.co.kr"
             self.cell(190, 8, txt=footer_text, border=0, ln=False, align="C")
 
-    # PDF 생성 함수
+    # PDF 생성 함수 (필터 사양 확장에 대응하여 행 높이 4.3mm로 전면 초압축 제어 🌟)
     def generate_pdf(model_name, specs_list, input_conditions, project_info, density_info, coil_calc_info, is_velocity_warning):
         pdf = RootAirPDF()
         pdf.add_page()
@@ -202,111 +202,113 @@ else:
             pdf.set_font("helvetica", size=10)
 
         if os.path.exists("company_logo.png"):
-            pdf.image("company_logo.png", x=10, y=8, w=25)
+            pdf.image("company_logo.png", x=10, y=7, w=23)
         if os.path.exists("ahri_logo.png"):
-            pdf.image("ahri_logo.png", x=175, y=8, w=25)
+            pdf.image("ahri_logo.png", x=175, y=7, w=23)
             
-        pdf.set_y(17)
+        pdf.set_y(15)
 
         if has_korean:
-            pdf.set_font("Malgun", style="", size=18)
+            pdf.set_font("Malgun", style="", size=17)
             pdf.set_text_color(30, 41, 59)
-            pdf.cell(190, 10, txt="루트에어 AHU 장비 선정 성적서", ln=True, align="C")
+            pdf.cell(190, 9, txt="루트에어 AHU 장비 선정 성적서", ln=True, align="C")
         pdf.ln(2)
         
         if has_korean:
-            pdf.set_font("Malgun", style="", size=9)
+            pdf.set_font("Malgun", style="", size=8.5)
             pdf.set_text_color(51, 65, 85)
-            pdf.cell(25, 5.5, txt=" 프로젝트명", border=1)
-            pdf.cell(80, 5.5, txt=f" {project_info['project_name']}", border=1)
-            pdf.cell(25, 5.5, txt=" 작성자", border=1)
-            pdf.cell(60, 5.5, txt=f" {project_info['author']}", border=1, ln=True)
-            pdf.cell(25, 5.5, txt=" 선정 일자", border=1)
-            pdf.cell(165, 5.5, txt=f" {project_info['date']}", border=1, ln=True)
-        pdf.ln(3)
+            pdf.cell(25, 5.0, txt=" 프로젝트명", border=1)
+            pdf.cell(80, 5.0, txt=f" {project_info['project_name']}", border=1)
+            pdf.cell(25, 5.0, txt=" 작성자", border=1)
+            pdf.cell(60, 5.0, txt=f" {project_info['author']}", border=1, ln=True)
+            pdf.cell(25, 5.0, txt=" 선정 일자", border=1)
+            pdf.cell(165, 5.0, txt=f" {project_info['date']}", border=1, ln=True)
+        pdf.ln(2)
         
-        pdf.set_font("Malgun" if has_korean else "helvetica", style="" if has_korean else "B", size=10)
+        pdf.set_font("Malgun" if has_korean else "helvetica", style="" if has_korean else "B", size=9.5)
         pdf.set_text_color(15, 23, 42)
-        pdf.cell(190, 5.5, txt="[1] 설계 입력 조건 및 공기 밀도 보정 (Design Input & Density)", ln=True, align="L")
-        pdf.set_font("Malgun" if has_korean else "helvetica", size=8.2)
+        pdf.cell(190, 5.0, txt="[1] 설계 입력 조건 및 공기 밀도 보정 (Design Input & Density)", ln=True, align="L")
+        pdf.set_font("Malgun" if has_korean else "helvetica", size=8.0)
         
-        pdf.cell(45, 5.0, txt=" Required Air Flow:", border=1)
-        pdf.cell(50, 5.0, txt=f" {input_conditions['cmh']:,} CMH", border=1)
-        pdf.cell(45, 5.0, txt=" Unit Layout Type:", border=1)
-        pdf.cell(50, 5.0, txt=f" {input_conditions['ahu_type_label']}", border=1, ln=True)
+        pdf.cell(45, 4.4, txt=" Required Air Flow:", border=1)
+        pdf.cell(50, 4.4, txt=f" {input_conditions['cmh']:,} CMH", border=1)
+        pdf.cell(45, 4.4, txt=" Unit Layout Type:", border=1)
+        pdf.cell(50, 4.0, txt=f" {input_conditions['ahu_type_label']}", border=1, ln=True)
         
-        pdf.cell(45, 5.0, txt=" Input Cooling Load:", border=1)
-        pdf.cell(50, 5.0, txt=f" {input_conditions['cool']:,} kcal/h", border=1)
-        pdf.cell(45, 5.0, txt=" Corrected Cool Load:", border=1)
-        pdf.cell(50, 5.0, txt=f" {int(density_info['corr_cool']):,} kcal/h", border=1, ln=True)
+        pdf.cell(45, 4.4, txt=" Input Cooling Load:", border=1)
+        pdf.cell(50, 4.4, txt=f" {input_conditions['cool']:,} kcal/h", border=1)
+        pdf.cell(45, 4.0, txt=" Corrected Cool Load:", border=1)
+        pdf.cell(50, 4.0, txt=f" {int(density_info['corr_cool']):,} kcal/h", border=1, ln=True)
         
-        pdf.cell(45, 5.0, txt=" Input Heating Load:", border=1)
-        pdf.cell(50, 5.0, txt=f" {input_conditions['heat']:,} kcal/h", border=1)
-        pdf.cell(45, 5.0, txt=" Corrected Heat Load:", border=1)
-        pdf.cell(50, 5.0, txt=f" {int(density_info['corr_heat']):,} kcal/h", border=1, ln=True)
+        pdf.cell(45, 4.4, txt=" Input Heating Load:", border=1)
+        pdf.cell(50, 4.4, txt=f" {input_conditions['heat']:,} kcal/h", border=1)
+        pdf.cell(45, 4.4, txt=" Corrected Heat Load:", border=1)
+        pdf.cell(50, 4.4, txt=f" {int(density_info['corr_heat']):,} kcal/h", border=1, ln=True)
         
-        pdf.cell(45, 5.0, txt=" Project Location:", border=1)
-        pdf.cell(50, 5.0, txt=f" {density_info['location'].split(' ')[0]}", border=1)
-        pdf.cell(45, 5.0, txt=" Real Air Density:", border=1)
-        pdf.cell(50, 5.0, txt=f" {density_info['density']} kg/m3", border=1, ln=True)
-        pdf.ln(3)
+        pdf.cell(45, 4.4, txt=" Project Location:", border=1)
+        pdf.cell(50, 4.4, txt=f" {density_info['location'].split(' ')[0]}", border=1)
+        pdf.cell(45, 4.4, txt=" Real Air Density:", border=1)
+        pdf.cell(50, 4.4, txt=f" {density_info['density']} kg/m3", border=1, ln=True)
+        pdf.ln(2)
         
+        # [2] 코일 열정격 및 옵션 정보
         pdf.set_font("Malgun" if has_korean else "helvetica", style="" if has_korean else "B", size=10)
         pdf.cell(190, 5.5, txt="[2] 코일 열정격 및 옵션 사양 (Coil & Option Mechanical Data)", ln=True, align="L")
-        pdf.set_font("Malgun" if has_korean else "helvetica", size=8.2)
+        pdf.set_font("Malgun" if has_korean else "helvetica", size=8.0)
         
-        pdf.cell(45, 5.0, txt=" 냉수 입/출구 온도:", border=1)
-        pdf.cell(50, 5.0, txt=f" {coil_calc_info['c_tw1']} C -> {coil_calc_info['c_tw2']} C", border=1)
-        pdf.cell(45, 5.0, txt=" 온수 입/출구 온도:", border=1)
-        pdf.cell(50, 5.0, txt=f" {coil_calc_info['h_tw1']} C -> {coil_calc_info['h_tw2']} C", border=1, ln=True)
+        pdf.cell(45, 4.4, txt=" 냉수 입/출구 온도:", border=1)
+        pdf.cell(50, 4.4, txt=f" {coil_calc_info['c_tw1']} C -> {coil_calc_info['c_tw2']} C", border=1)
+        pdf.cell(45, 4.4, txt=" 온수 입/출구 온도:", border=1)
+        pdf.cell(50, 4.2, txt=f" {coil_calc_info['h_tw1']} C -> {coil_calc_info['h_tw2']} C", border=1, ln=True)
         
-        pdf.cell(45, 5.0, txt=" 냉수 요구 유량 (LPM):", border=1)
-        pdf.cell(50, 5.0, txt=f" {coil_calc_info['cool_lpm']} LPM", border=1)
-        pdf.cell(45, 5.0, txt=" 온수 요구 유량 (LPM):", border=1)
-        pdf.cell(50, 5.0, txt=f" {coil_calc_info['heat_lpm']} LPM", border=1, ln=True)
+        pdf.cell(45, 4.4, txt=" 냉수 요구 유량 (LPM):", border=1)
+        pdf.cell(50, 4.4, txt=f" {coil_calc_info['cool_lpm']} LPM", border=1)
+        pdf.cell(45, 4.2, txt=" 온수 요구 유량 (LPM):", border=1)
+        pdf.cell(50, 4.2, txt=f" {coil_calc_info['heat_lpm']} LPM", border=1, ln=True)
         
-        pdf.cell(45, 5.0, txt=" 냉방 대수평균 (LMTD):", border=1)
-        pdf.cell(50, 5.0, txt=f" {coil_calc_info['cool_lmtd']} C", border=1)
-        pdf.cell(45, 5.0, txt=" 코일 관내 유속 (Water):", border=1)
-        pdf.cell(50, 5.0, txt=f" {coil_calc_info['water_velocity']} m/s (안정)", border=1, ln=True)
-        pdf.ln(3)
+        pdf.cell(45, 4.4, txt=" 냉방 대수평균 (LMTD):", border=1)
+        pdf.cell(50, 4.4, txt=f" {coil_calc_info['cool_lmtd']} C", border=1)
+        pdf.cell(45, 4.4, txt=" 코일 관내 유속 (Water):", border=1)
+        pdf.cell(50, 4.4, txt=f" {coil_calc_info['water_velocity']} m/s (안정)", border=1, ln=True)
+        pdf.ln(2)
         
+        # [3] 추천 모델 상세 기술 규격 명세
         pdf.set_font("Malgun" if has_korean else "helvetica", style="" if has_korean else "B", size=10)
         pdf.cell(190, 5.5, txt=f"[3] 추천 모델 상세 기술 규격 명세: {model_name}", ln=True, align="L")
-        pdf.set_font("Malgun" if has_korean else "helvetica", size=8.0)
+        pdf.set_font("Malgun" if has_korean else "helvetica", size=7.8)
             
         pdf.set_fill_color(241, 245, 249)
-        pdf.cell(75, 4.8, txt=" Specification Item", border=1, fill=True)
-        pdf.cell(115, 4.8, txt=" Technical Data", border=1, fill=True, ln=True)
+        pdf.cell(75, 4.3, txt=" Specification Item", border=1, fill=True)
+        pdf.cell(115, 4.3, txt=" Technical Data", border=1, fill=True, ln=True)
         
         for spec, val in specs_list:
             if is_velocity_warning and "코일 면풍속" in spec:
                 pdf.set_text_color(220, 38, 38)
-                pdf.cell(75, 4.8, txt=f" {spec}", border=1)
-                pdf.cell(115, 4.8, txt=f" {val}", border=1, ln=True)
+                pdf.cell(75, 4.3, txt=f" {spec}", border=1)
+                pdf.cell(115, 4.3, txt=f" {val}", border=1, ln=True)
                 pdf.set_text_color(51, 65, 85)
             else:
-                pdf.cell(75, 4.8, txt=f" {spec}", border=1)
-                pdf.cell(115, 4.8, txt=f" {val}", border=1, ln=True)
+                pdf.cell(75, 4.3, txt=f" {spec}", border=1)
+                pdf.cell(115, 4.3, txt=f" {val}", border=1, ln=True)
             
         pdf.ln(2)
         
         if is_velocity_warning:
             pdf.set_text_color(220, 38, 38)
-            pdf.set_font("Malgun", style="", size=8.5)
-            pdf.cell(190, 4.2, txt="⚠️ 코일 면풍속이 2.5 m/s를 초과하여 응축수 비산 위험이 있습니다.", border=0, ln=True, align="L")
+            pdf.set_font("Malgun", style="", size=8.0)
+            pdf.cell(190, 4.0, txt="⚠️ 코일 면풍속이 2.5 m/s를 초과하여 응축수 비산 위험이 있습니다.", border=0, ln=True, align="L")
             pdf.ln(1)
 
-        pdf.set_font("Malgun", style="", size=7.5)
+        pdf.set_font("Malgun", style="", size=7.0)
         pdf.set_text_color(148, 163, 184)
-        pdf.cell(190, 4, txt="* 본 성적서는 루트에어 공기선도_RootAirChart v1.1 및 Flaktkorea 코일전열 공식을 통합 연동한 정밀 설계 문서입니다.", ln=True, align="C")
+        pdf.cell(190, 3.5, txt="* 본 성적서는 루트에어 공기선도_RootAirChart v1.1 및 Flaktkorea 코일전열 공식을 통합 연동한 정밀 설계 문서입니다.", ln=True, align="C")
         
         pdf_output = pdf.output()
         if isinstance(pdf_output, str):
             return pdf_output.encode('latin1')
         return bytes(pdf_output)
 
-    # 화면 레이아웃
+    # 화면 레이아웃 분할
     col_input, col_result = st.columns([1, 2], gap="large")
 
     with col_input:
@@ -353,6 +355,7 @@ else:
             coil_h_tw1 = st.number_input("온수 입구 온도 (°C)", value=60.0, step=0.5)
             coil_h_tw2 = st.number_input("온수 출구 온도 (°C)", value=50.0, step=0.5)
 
+        # 🌟 [부속품 업그레이드]: 가습 장치 활성화 시 하위 토글로 실내 목표 상대습도 슬라이더 연동
         with st.expander("➕ AHU 구성 부속품 및 추가 옵션 선택 (정압 보정 연동)", expanded=True):
             opt_antifreeze = st.checkbox("❄️ 동파방지 예열 코일 장비 내장 (Pre-Heater)", value=False)
             opt_humidifier = st.selectbox("💨 가습기 종류 선택 (Humidifier Type)", ["장착 안 함 (None)", "기화식 가습기 (Evaporative)", "전극봉식 가습기 (Electronic)", "증기 분무식 가습기 (Steam)"])
@@ -381,6 +384,13 @@ else:
     with col_result:
         st.subheader("3. 최적 모델 선정 결과 (Output)")
         st.write("")
+
+        # 🌟 [버그 원천 차단]: 버튼 누르기 전 초기 로딩 시 NameError 방지 기본 안전벨트 채우기
+        v_target_rh = st.session_state.get('target_rh', 50)
+        v_opt_humid = st.session_state.get('opt_humid', "장착 안 함 (None)")
+        v_added_stat = st.session_state.get('added_stat', 0.0)
+        v_opt_anti = st.session_state.get('opt_anti', False)
+        v_opt_elim = st.session_state.get('opt_elim', False)
 
         if submit_btn or st.session_state.get('pdf_ready', False):
             if submit_btn:
@@ -432,11 +442,11 @@ else:
             v_ch_tw1 = st.session_state.get('ch_tw1', coil_h_tw1)
             v_ch_tw2 = st.session_state.get('ch_tw2', coil_h_tw2)
             
-            v_opt_anti = st.session_state.get('opt_anti', False)
-            v_opt_humid = st.session_state.get('opt_humid', "장착 안 함 (None)")
-            v_opt_elim = st.session_state.get('opt_elim', False)
-            v_added_stat = st.session_state.get('added_stat', 0.0)
-            v_target_rh = st.session_state.get('target_rh', 50)
+            v_opt_anti = st.session_state.get('opt_anti', opt_antifreeze)
+            v_opt_humid = st.session_state.get('opt_humid', opt_humidifier)
+            v_opt_elim = st.session_state.get('opt_elim', opt_eliminator)
+            v_added_stat = st.session_state.get('added_stat', added_static)
+            v_target_rh = st.session_state.get('target_rh', target_indoor_rh)
             
             density_ratio = 1.2041 / v_rho
             corr_cool_req = curr_cool * density_ratio
@@ -486,7 +496,7 @@ else:
                     
                 is_velocity_warning = coil_velocity >= 2.5
 
-                # 🌟 [버그 수정의 핵심]: NameError를 방지하기 위해 로컬 변수 대신 세션 안전 변수 v_target_rh를 직접 활용
+                # 🌟 [가습량 실시간 자동 연산서 구동]: NameError 완벽 방지 튜닝 적용
                 if v_opt_humid != "장착 안 함 (None)":
                     x_outdoor = calculate_absolute_humidity(v_ht, v_hr)
                     x_indoor = calculate_absolute_humidity(22.0, v_target_rh)
